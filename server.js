@@ -53,13 +53,29 @@ async function notionFetch(path, options = {}) {
 app.get('/api/options', checkAuth, async (req, res) => {
   if (!NOTION_TOKEN) return res.status(500).json({ error: 'NOTION_TOKEN not set' });
   try {
-    const r = await notionFetch(`/databases/${DATABASE_ID}`);
+    // En la nueva API de Notion, las propiedades están en data_sources
+    const r = await notionFetch(`/data_sources/${DATA_SOURCE_ID}`);
     if (!r.ok) {
-      const text = await r.text();
-      return res.status(r.status).json({ error: text });
+      // Fallback: intentar con el endpoint viejo de databases
+      const r2 = await notionFetch(`/databases/${DATABASE_ID}`);
+      if (!r2.ok) {
+        const text = await r2.text();
+        return res.status(r2.status).json({ error: text });
+      }
+      const db = await r2.json();
+      const props = db.properties || {};
+      const names = (field) => {
+        const sel = props[field]?.select;
+        return sel ? sel.options.map((o) => o.name) : [];
+      };
+      return res.json({
+        tipos: names('Tipo'),
+        categorias: names('Categoria'),
+        cuentas: names('Cuenta'),
+      });
     }
-    const db = await r.json();
-    const props = db.properties || {};
+    const ds = await r.json();
+    const props = ds.properties || {};
     const names = (field) => {
       const sel = props[field]?.select;
       return sel ? sel.options.map((o) => o.name) : [];
