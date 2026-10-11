@@ -153,6 +153,14 @@ input, select, textarea { font-family: inherit; }
 .auth-btn:hover { background: var(--jade-bright); }
 .auth-btn:active { transform: scale(0.98); }
 .auth-error { color: var(--coral); font-size: 13px; margin-top: 8px; min-height: 18px; }
+.auth-checkbox {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 13px;
+  color: var(--text-dim);
+  margin-bottom: 14px;
+  cursor: pointer;
+}
+.auth-checkbox input { width: auto; }
 
 /* ============================================
    TOP BAR
@@ -180,13 +188,14 @@ input, select, textarea { font-family: inherit; }
 }
 .brand-mark {
   width: 30px; height: 30px;
-  background: linear-gradient(135deg, var(--jade) 0%, var(--jade) 100%);
+  background: linear-gradient(135deg, var(--jade) 0%, var(--jade-dim) 100%);
   border-radius: var(--radius-sm);
   display: flex; align-items: center; justify-content: center;
-  font-size: 16px;
   flex-shrink: 0;
   box-shadow: var(--shadow-glow-jade);
+  color: #052e16;
 }
+.brand-mark svg { width: 18px; height: 18px; }
 .month-pill {
   font-family: var(--font-mono);
   font-size: 11px;
@@ -223,9 +232,12 @@ input, select, textarea { font-family: inherit; }
   max-width: 720px;
   margin: 0 auto;
 }
-.page.active { display: block; animation: fadeIn 0.3s ease; }
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(8px); }
+.page.active {
+  display: block;
+  animation: pageEnter 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes pageEnter {
+  from { opacity: 0; transform: translateY(12px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
@@ -650,6 +662,15 @@ input, select, textarea { font-family: inherit; }
   overflow: hidden;
   margin-top: 6px;
 }
+.presupuesto-total {
+  padding: 10px 14px;
+  background: var(--bg-2);
+  border-radius: var(--radius-sm);
+  margin-bottom: 12px;
+  font-size: 13px;
+  color: var(--text-dim);
+}
+.presupuesto-total strong { color: var(--gold); font-weight: 600; }
 .progress-fill {
   height: 100%;
   background: var(--jade);
@@ -692,6 +713,7 @@ input, select, textarea { font-family: inherit; }
 }
 .nav-item.active { color: var(--jade-bright); }
 .nav-icon { font-size: 20px; line-height: 1; }
+.nav-svg { width: 22px; height: 22px; stroke: currentColor; fill: none; }
 .nav-item.add {
   background: var(--jade);
   color: #052e16;
@@ -879,6 +901,10 @@ input, select, textarea { font-family: inherit; }
     <div class="auth-brand">💰 Finanzas GT</div>
     <div class="auth-subtitle">Introduce tu contraseña</div>
     <input type="password" class="auth-input" id="passwordInput" placeholder="••••••••" autocomplete="off">
+    <label class="auth-checkbox">
+      <input type="checkbox" id="rememberSession" checked>
+      <span>Recordar sesión (no volver a preguntar)</span>
+    </label>
     <button class="auth-btn" id="authBtn">Entrar</button>
     <div class="auth-error" id="authError"></div>
   </div>
@@ -889,7 +915,12 @@ input, select, textarea { font-family: inherit; }
   <!-- TOP BAR -->
   <header class="topbar">
     <div class="brand">
-      <div class="brand-mark">💰</div>
+      <div class="brand-mark">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="9"/>
+          <path d="M12 7v10M9 10h4.5a2 2 0 010 4H10a2 2 0 000 4h5"/>
+        </svg>
+      </div>
       <span>Finanzas</span>
     </div>
     <div class="month-pill" id="monthPill">—</div>
@@ -1087,22 +1118,22 @@ input, select, textarea { font-family: inherit; }
   <!-- ============ BOTTOM NAV ============ -->
   <nav class="bottom-nav">
     <button class="nav-item active" data-go="dashboard">
-      <span class="nav-icon">🏠</span>
+      <svg class="nav-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12L12 3L21 12M5 10V21H19V10"/></svg>
       <span>Inicio</span>
     </button>
     <button class="nav-item" data-go="movimientos">
-      <span class="nav-icon">💸</span>
-      <span>Mov.</span>
+      <svg class="nav-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
+      <span>Movs</span>
     </button>
     <button class="nav-item add" data-action="add-movimiento">
-      <span class="nav-icon">+</span>
+      <svg class="nav-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
     </button>
     <button class="nav-item" data-go="cuentas">
-      <span class="nav-icon">💳</span>
+      <svg class="nav-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18"/></svg>
       <span>Cuentas</span>
     </button>
     <button class="nav-item" data-action="open-more">
-      <span class="nav-icon">⋯</span>
+      <svg class="nav-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>
       <span>Más</span>
     </button>
   </nav>
@@ -1117,45 +1148,45 @@ input, select, textarea { font-family: inherit; }
       </div>
       <div class="list">
         <button class="list-item" data-go="presupuesto" style="width:100%; text-align:left; background:none;">
-          <div class="list-icon" style="background: rgba(251, 191, 36, 0.15); color: var(--gold);">📊</div>
+          <div class="list-icon" style="background: rgba(251, 191, 36, 0.15); color: var(--gold);">$</div>
           <div class="list-info">
             <div class="list-title">Presupuesto</div>
             <div class="list-meta">Gastos planeados y pagados</div>
           </div>
         </button>
         <button class="list-item" data-go="metas" style="width:100%; text-align:left; background:none;">
-          <div class="list-icon goal">🎯</div>
+          <div class="list-icon goal">★</div>
           <div class="list-info">
             <div class="list-title">Metas de ahorro</div>
             <div class="list-meta">Ahorra con estrategia</div>
           </div>
         </button>
         <button class="list-item" data-go="prestamos" style="width:100%; text-align:left; background:none;">
-          <div class="list-icon loan">🏦</div>
+          <div class="list-icon loan">$</div>
           <div class="list-info">
             <div class="list-title">Préstamos</div>
             <div class="list-meta">Cuotas, intereses, saldos</div>
           </div>
         </button>
         <button class="list-item" data-go="visacuotas" style="width:100%; text-align:left; background:none;">
-          <div class="list-icon visa">🛍️</div>
+          <div class="list-icon visa">$</div>
           <div class="list-info">
             <div class="list-title">Visacuotas</div>
             <div class="list-meta">Compras a cuotas</div>
           </div>
         </button>
         <button class="list-item" data-action="open-simulador" style="width:100%; text-align:left; background:none;">
-          <div class="list-icon" style="background: var(--jade-glow); color: var(--jade-bright);">🧮</div>
+          <div class="list-icon" style="background: var(--jade-glow); color: var(--jade-bright);">⌥</div>
           <div class="list-info">
             <div class="list-title">Simulador</div>
             <div class="list-meta">Préstamo · ahorro · visacuotas</div>
           </div>
         </button>
         <button class="list-item" data-action="open-settings" style="width:100%; text-align:left; background:none;">
-          <div class="list-icon" style="background: var(--bg-3); color: var(--text-dim);">⚙️</div>
+          <div class="list-icon" style="background: var(--bg-3); color: var(--text-dim);">⚙</div>
           <div class="list-info">
             <div class="list-title">Ajustes</div>
-            <div class="list-meta">Tipo de cambio, opciones</div>
+            <div class="list-meta">Tipo de cambio, sesión</div>
           </div>
         </button>
       </div>
@@ -1592,16 +1623,16 @@ let SETTINGS = { exchangeRate: 7.8, rememberSession: true };
 
 /* ---------- AUTH ---------- */
 function getPassword() {
-  // Usar localStorage para persistir entre sesiones
-  return localStorage.getItem(CONFIG.PASSWORD_KEY) || sessionStorage.getItem(CONFIG.PASSWORD_KEY);
-}
-function setPassword(p) {
   if (SETTINGS.rememberSession) {
-    localStorage.setItem(CONFIG.PASSWORD_KEY, p);
-    sessionStorage.setItem(CONFIG.PASSWORD_KEY, p);
-  } else {
-    sessionStorage.setItem(CONFIG.PASSWORD_KEY, p);
+    return localStorage.getItem(CONFIG.PASSWORD_KEY) || sessionStorage.getItem(CONFIG.PASSWORD_KEY);
   }
+  return sessionStorage.getItem(CONFIG.PASSWORD_KEY);
+}
+function setPassword(p, remember = true) {
+  if (remember) {
+    localStorage.setItem(CONFIG.PASSWORD_KEY, p);
+  }
+  sessionStorage.setItem(CONFIG.PASSWORD_KEY, p);
 }
 function clearPassword() {
   localStorage.removeItem(CONFIG.PASSWORD_KEY);
@@ -1620,12 +1651,15 @@ async function tryAuth(password) {
 document.getElementById('authBtn').addEventListener('click', async () => {
   const input = document.getElementById('passwordInput');
   const errEl = document.getElementById('authError');
+  const remember = document.getElementById('rememberSession').checked;
   const pwd = input.value;
   if (!pwd) { errEl.textContent = 'Ingresa tu contraseña'; return; }
   errEl.textContent = '';
   const ok = await tryAuth(pwd);
   if (ok) {
-    setPassword(pwd);
+    SETTINGS.rememberSession = remember;
+    saveSettings();
+    setPassword(pwd, remember);
     document.getElementById('authOverlay').classList.remove('show');
     document.getElementById('app').hidden = false;
     init();
@@ -1843,7 +1877,7 @@ const tipoMap = {
   expense: { tipo: 'Gasto diario', icon: '↓', label: 'Registrar gasto', color: 'expense' },
   income: { tipo: 'Ingreso', icon: '↑', label: 'Registrar ingreso', color: 'income' },
   transfer: { tipo: 'Transferencia', icon: '↔', label: 'Transferir', color: 'transfer' },
-  tc: { tipo: 'Pago de tarjeta', icon: '💳', label: 'Pagar TC', color: 'tc' },
+  tc: { tipo: 'Pago de tarjeta', icon: '◇', label: 'Pagar TC', color: 'tc' },
 };
 
 document.getElementById('typeToggle').addEventListener('click', (e) => {
@@ -2095,7 +2129,7 @@ function renderCuentasCompleto() {
 
 function getAccountIcon(name) {
   const n = name.toLowerCase();
-  if (n.startsWith('tc ')) return '💳';
+  if (n.startsWith('tc ')) return '◇';
   if (n.includes('efectivo')) return '💵';
   if (n.includes('cooperativa')) return '🏛';
   if (n.includes('tigo') || n.includes('yep') || n.includes('wipay')) return '📱';
@@ -2105,11 +2139,14 @@ function getAccountIcon(name) {
 function renderDashboardExtras() {
   // Presupuesto
   const presContainer = document.getElementById('dashboardPresupuesto');
-  const pendientes = ALL_DATA.presupuestos.filter(p => props(p.properties, 'Estado', '') === 'Pendiente').slice(0, 3);
+  const pendientes = ALL_DATA.presupuestos.filter(p => props(p.properties, 'Estado', '') === 'Pendiente');
+  const totalPendiente = pendientes.reduce((s, p) => s + props(p.properties, 'Limite mensual', 0), 0);
   if (pendientes.length === 0) {
     presContainer.innerHTML = '<div class="empty"><div class="empty-icon">✓</div>Sin pendientes</div>';
   } else {
-    presContainer.innerHTML = '<div class="list">' + pendientes.map(p => {
+    presContainer.innerHTML = `
+      <div class="presupuesto-total">Por pagar: <strong>${fmt(totalPendiente)}</strong> · ${pendientes.length} pendiente${pendientes.length !== 1 ? 's' : ''}</div>
+      <div class="list">` + pendientes.slice(0, 3).map(p => {
       const cat = props(p.properties, 'Categoria', '?');
       const lim = props(p.properties, 'Limite mensual', 0);
       return `<div class="list-item">
@@ -2118,7 +2155,7 @@ function renderDashboardExtras() {
           <div class="list-title">${escapeHtml(cat)}</div>
           <div class="list-meta">Límite ${fmt(lim)}</div>
         </div>
-        <button class="text-btn" data-action="mark-paid" data-id="${p.id}">Pagar</button>
+        <button class="text-btn" data-action="mark-presupuesto-paid" data-id="${p.id}">Pagar</button>
       </div>`;
     }).join('') + '</div>';
   }
@@ -2247,7 +2284,7 @@ function renderPresupuestos() {
 function renderMetas() {
   const cont = document.getElementById('metasList');
   if (ALL_DATA.metas.length === 0) {
-    cont.innerHTML = '<div class="empty"><div class="empty-icon">🎯</div>Sin metas. Toca "+ Agregar"</div>';
+    cont.innerHTML = '<div class="empty"><div class="empty-icon">+</div>Sin metas. Toca "+ Agregar"</div>';
     return;
   }
   cont.innerHTML = ALL_DATA.metas.map(m => {
@@ -2258,13 +2295,14 @@ function renderMetas() {
     const estrategia = props(m.properties, 'Estrategia', '');
     const pct = obj > 0 ? Math.min(100, (saved / obj) * 100) : 0;
     return `<div class="list-item">
-      <div class="list-icon goal">🎯</div>
+      <div class="list-icon goal">★</div>
       <div class="list-info">
         <div class="list-title">${escapeHtml(name)}</div>
         <div class="list-meta">${fmt(saved)} / ${fmt(obj)} · ${pct.toFixed(0)}%${estrategia ? ' · ' + estrategia : ''}</div>
         <div class="progress-bar"><div class="progress-fill gold" style="width: ${pct}%"></div></div>
       </div>
       <div class="list-amount gold">${fmt(obj - saved)}</div>
+      <button class="text-btn" data-action="add-money-meta" data-id="${m.id}" data-nombre="${escapeHtml(name)}">+ Aportar</button>
     </div>`;
   }).join('');
 }
@@ -2327,17 +2365,43 @@ document.addEventListener('click', async (e) => {
   if (action === 'mark-presupuesto-paid') {
     const id = e.target.closest('[data-id]').dataset.id;
     try {
-      // Marcar como pagado via PATCH a Notion
-      await fetch(`/api/presupuestos/${id}`, { method: 'PATCH' }).catch(() => {});
-      // Mejor: simplemente refrescar y mostrar mensaje
-      showToast('✓ Marca este presupuesto como pagado en Notion', 'success');
-    } catch {}
+      await api(`/api/presupuestos/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ estado: 'Pagado', montoPagado: 0 }),
+      });
+      showToast('✓ Marcado como pagado', 'success');
+      await loadPresupuestos();
+    } catch (e) { showToast('Error: ' + e.message, 'error'); }
+  }
+
+  if (action === 'add-money-meta') {
+    const id = e.target.closest('[data-id]').dataset.id;
+    const nombre = e.target.closest('[data-nombre]')?.dataset.nombre || 'la meta';
+    const monto = prompt(`¿Cuánto quieres agregar a "${nombre}"? (Q)`);
+    if (!monto) return;
+    const m = Number(monto);
+    if (!m || m <= 0) { showToast('Monto inválido', 'error'); return; }
+    try {
+      // Crear movimiento de ingreso vinculado a la meta
+      await api('/api/movements', {
+        method: 'POST',
+        body: JSON.stringify({
+          tipo: 'Ingreso',
+          cuenta: 'Efectivo',
+          monto: m,
+          categoria: 'Ahorro',
+          metaId: id,
+          nota: `Aporte a meta "${nombre}"`,
+        }),
+      });
+      showToast(`✓ Q${m.toFixed(2)} agregado a "${nombre}"`, 'success');
+      await cargarTodo();
+    } catch (e) { showToast('Error: ' + e.message, 'error'); }
   }
 
   if (action === 'pay-cuota') {
     const id = e.target.closest('[data-id]').dataset.id;
     const tipo = e.target.closest('[data-tipo]').dataset.tipo;
-    // Preguntar monto y cuenta desde donde pagar
     const monto = prompt('Monto de la cuota (Q):');
     if (!monto) return;
     const m = Number(monto);

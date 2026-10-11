@@ -267,6 +267,19 @@ app.post('/api/movements', checkAuth, async (req, res) => {
   }
 });
 
+// Helper: actualizar campos de una página por ID
+async function updatePage(pageId, properties) {
+  const r = await notionFetch(`/pages/${pageId}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ properties }),
+  });
+  if (!r.ok) {
+    const text = await r.text();
+    throw new Error(`Notion ${r.status}: ${text}`);
+  }
+  return r.json();
+}
+
 // ============================================
 // PRESUPUESTOS
 // ============================================
@@ -274,6 +287,25 @@ app.get('/api/presupuestos', checkAuth, async (req, res) => {
   try {
     const data = await queryDatabase(IDS.dataSourcePres, {}, [], 50);
     res.json(data);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.patch('/api/presupuestos/:id', checkAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { estado, montoPagado, categoria, limiteMensual, fechaLimite, notas } = req.body || {};
+    const props = {};
+    if (estado !== undefined) props.Estado = { select: { name: estado } };
+    if (montoPagado !== undefined) props['Monto pagado'] = { number: Number(montoPagado) };
+    if (categoria !== undefined) props.Categoria = { title: [{ text: { content: categoria } }] };
+    if (limiteMensual !== undefined) props['Limite mensual'] = { number: Number(limiteMensual) };
+    if (fechaLimite !== undefined) props['Fecha limite'] = { date: { start: fechaLimite } };
+    if (notas !== undefined) props.Notas = { rich_text: [{ text: { content: notas } }] };
+
+    const page = await updatePage(id, props);
+    res.json({ ok: true, id: page.id });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
@@ -324,6 +356,25 @@ app.post('/api/metas', checkAuth, async (req, res) => {
       Notas: notas ? { rich_text: [{ text: { content: notas } }] } : undefined,
       Estado: { select: { name: estado || 'Activa' } },
     });
+    res.json({ ok: true, id: page.id });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.patch('/api/metas/:id', checkAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { estado, montoObjetivo, fechaObjetivo, estrategia, cuotaSugerida, notas } = req.body || {};
+    const props = {};
+    if (estado !== undefined) props.Estado = { select: { name: estado } };
+    if (montoObjetivo !== undefined) props['Monto objetivo'] = { number: Number(montoObjetivo) };
+    if (fechaObjetivo !== undefined) props['Fecha objetivo'] = { date: { start: fechaObjetivo } };
+    if (estrategia !== undefined) props.Estrategia = { select: { name: estrategia } };
+    if (cuotaSugerida !== undefined) props['Cuota sugerida'] = { number: Number(cuotaSugerida) };
+    if (notas !== undefined) props.Notas = { rich_text: [{ text: { content: notas } }] };
+
+    const page = await updatePage(id, props);
     res.json({ ok: true, id: page.id });
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -383,6 +434,23 @@ app.post('/api/prestamos', checkAuth, async (req, res) => {
   }
 });
 
+app.patch('/api/prestamos/:id', checkAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { estado, cuotasPagadas, contraparte, notas } = req.body || {};
+    const props = {};
+    if (estado !== undefined) props.Estado = { select: { name: estado } };
+    if (cuotasPagadas !== undefined) props['Cuotas pagadas'] = { number: Number(cuotasPagadas) };
+    if (contraparte !== undefined) props.Contraparte = { rich_text: [{ text: { content: contraparte } }] };
+    if (notas !== undefined) props.Nota = { rich_text: [{ text: { content: notas } }] };
+
+    const page = await updatePage(id, props);
+    res.json({ ok: true, id: page.id });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // ============================================
 // VISACUOTAS
 // ============================================
@@ -421,6 +489,23 @@ app.post('/api/visacuotas', checkAuth, async (req, res) => {
       Estado: { select: { name: estado || 'Activa' } },
       Notas: notas ? { rich_text: [{ text: { content: notas } }] } : undefined,
     });
+    res.json({ ok: true, id: page.id });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.patch('/api/visacuotas/:id', checkAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { estado, cuotasPagadas, establecimiento, notas } = req.body || {};
+    const props = {};
+    if (estado !== undefined) props.Estado = { select: { name: estado } };
+    if (cuotasPagadas !== undefined) props['Cuotas pagadas'] = { number: Number(cuotasPagadas) };
+    if (establecimiento !== undefined) props.Establecimiento = { rich_text: [{ text: { content: establecimiento } }] };
+    if (notas !== undefined) props.Notas = { rich_text: [{ text: { content: notas } }] };
+
+    const page = await updatePage(id, props);
     res.json({ ok: true, id: page.id });
   } catch (e) {
     res.status(500).json({ error: e.message });
