@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: finanzas-gt
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: NOTION_TOKEN
+        sync: false
+      - key: DATABASE_ID
+        value: 3f5e0d97deba815db317c75dba96970a
+      - key: DATA_SOURCE_ID
+        value: 3f5e0d97deba814ebf1b000bc7a38d76
+      - key: APP_PASSWORD
+        sync: false
+      - key: NODE_VERSION
+        value: "20"
