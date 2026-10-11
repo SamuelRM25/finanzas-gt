@@ -77,10 +77,15 @@ async function notionFetch(path, options = {}) {
   return response;
 }
 
-async function queryDatabase(databaseId, filter = {}, sorts = [], pageSize = 100) {
-  const r = await notionFetch(`/databases/${databaseId}/query`, {
+async function queryDatabase(dataSourceId, filter = null, sorts = [], pageSize = 100) {
+  // Construir el body sin filter si está vacío
+  const body = { page_size: pageSize };
+  if (filter && Object.keys(filter).length > 0) body.filter = filter;
+  if (sorts && sorts.length > 0) body.sorts = sorts;
+
+  const r = await notionFetch(`/data_sources/${dataSourceId}/query`, {
     method: 'POST',
-    body: JSON.stringify({ filter, sorts, page_size: pageSize }),
+    body: JSON.stringify(body),
   });
   if (!r.ok) {
     const text = await r.text();
