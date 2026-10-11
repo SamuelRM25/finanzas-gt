@@ -10,7 +10,7 @@ const app = express();
 const PORT = process.env.PORT || 10000;
 
 const NOTION_API = 'https://api.notion.com/v1';
-const NOTION_VERSION = '2022-06-28';
+const NOTION_VERSION = '2026-03-11';
 const DATABASE_ID = process.env.DATABASE_ID || '3f5e0d97deba815db317c75dba96970a';
 const DATA_SOURCE_ID = process.env.DATA_SOURCE_ID || '3f5e0d97deba814ebf1b000bc7a38d76';
 const APP_PASSWORD = process.env.APP_PASSWORD || '';
@@ -171,6 +171,14 @@ app.post('/api/movements', checkAuth, async (req, res) => {
 
 // Health check
 app.get('/health', (req, res) => res.json({ ok: true }));
+
+// Favicon (SVG con emoji 💰)
+app.get('/favicon.ico', (req, res) => {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y="80" font-size="80">💰</text></svg>`;
+  res.setHeader('Content-Type', 'image/svg+xml');
+  res.setHeader('Cache-Control', 'public, max-age=86400');
+  res.send(svg);
+});
 
 // Static files
 app.use(express.static(path.join(__dirname)));
