@@ -1,4 +1,4 @@
-# 💰 Finanzas GT
+# 💰 MiFinanza
 
 App web moderna para gestionar tus finanzas personales, conectada a Notion como base de datos. Diseño profesional con motion graphics.
 

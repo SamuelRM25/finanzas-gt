@@ -250,8 +250,43 @@ app.post('/api/movements', checkAuth, async (req, res) => {
       });
     }
 
-    // Pago de TC: crear movimiento positivo en TC (reduce deuda)
+    // Pago de TC: visacuotas vinculadas primero, luego TC
     if (tipo === 'Pago de tarjeta' && cuentaDestino) {
+      try {
+        // Buscar visacuotas con Tarjeta = nombre de la TC
+        const visQuery = await queryDatabase(IDS.dataSourceVisa, {
+          property: 'Tarjeta',
+          rich_text: { contains: cuentaDestino },
+        });
+        const visacuotas = visQuery.results || [];
+        for (const v of visacuotas) {
+          const vId = v.id;
+          const vProps = v.properties;
+          const vNombre = vProps['Nombre']?.title?.[0]?.text?.content || vProps['Nombre']?.title?.[0]?.plain_text || '?';
+          const vTotal = vProps['Cuotas totales']?.number || 0;
+          const vPagadas = vProps['Cuotas pagadas']?.number || 0;
+          if (vPagadas < vTotal) {
+            const vCuota = vProps['Cuota mensual']?.formula?.number || 0;
+            // Incrementar cuotas pagadas
+            await updatePage(vId, {
+              'Cuotas pagadas': { number: vPagadas + 1 },
+            });
+            // Crear movimiento de gasto vinculado a la visacuota
+            await createPage(IDS.movimientos, {
+              ...baseProps,
+              Nombre: { title: [{ text: { content: `Cuota visacuota - ${vNombre} - ${monedaFinal === 'USD' ? '$' : 'Q'}${vCuota}` }}] },
+              Tipo: { select: { name: 'Pago de tarjeta' } },
+              Monto: { number: vCuota },
+              Cuenta: { select: { name: cuenta } },
+              Visacuota: { relation: [{ id: vId }] },
+              Nota: { rich_text: [{ text: { content: `Cuota ${vPagadas + 1}/${vTotal} de "${vNombre}"` } }] },
+            });
+          }
+        }
+      } catch (e) {
+        console.error('Error actualizando visacuotas:', e.message);
+      }
+      // Marcar TC como pagada (crear movimiento de ingreso en TC)
       await createPage(IDS.movimientos, {
         ...baseProps,
         Nombre: { title: [{ text: { content: `Pago TC - ${cuentaDestino} - ${monedaFinal === 'USD' ? '$' : 'Q'}${Math.abs(monto)}` }}] },
@@ -411,6 +446,15 @@ app.post('/api/prestamos', checkAuth, async (req, res) => {
     const totalPagar = cuota * n;
     const totalInteres = totalPagar - P;
 
+    // Auto-pagos: si fechaInicio es anterior a hoy, calcular cuántas cuotas deberían estar pagadas
+    let cuotasPagadasAuto = 0;
+    if (fechaInicio) {
+      const inicio = new Date(fechaInicio);
+      const hoy = new Date();
+      const mesesTranscurridos = Math.max(0, (hoy.getFullYear() - inicio.getFullYear()) * 12 + (hoy.getMonth() - inicio.getMonth()));
+      cuotasPagadasAuto = Math.min(n, mesesTranscurridos);
+    }
+
     const page = await createPage(IDS.prestamos, {
       Prestamo: { title: [{ text: { content: prestamo } }] },
       Tipo: { select: { name: tipo || 'Me prestaron' } },
@@ -421,14 +465,14 @@ app.post('/api/prestamos', checkAuth, async (req, res) => {
       'Fecha inicio': fechaInicio ? { date: { start: fechaInicio } } : undefined,
       'Fecha vencimiento': fechaVencimiento ? { date: { start: fechaVencimiento } } : undefined,
       'Cuotas totales': { number: n },
-      'Cuotas pagadas': { number: 0 },
+      'Cuotas pagadas': { number: cuotasPagadasAuto },
       'Cuota mensual': { number: Math.round(cuota * 100) / 100 },
       'Total a pagar': { number: Math.round(totalPagar * 100) / 100 },
       'Total interes': { number: Math.round(totalInteres * 100) / 100 },
-      Estado: { select: { name: estado || 'En curso' } },
+      Estado: { select: { name: estado || (cuotasPagadasAuto >= n ? 'Pagado' : 'En curso') } },
       Nota: notas ? { rich_text: [{ text: { content: notas } }] } : undefined,
     });
-    res.json({ ok: true, id: page.id, cuota, totalPagar, totalInteres });
+    res.json({ ok: true, id: page.id, cuota, totalPagar, totalInteres, cuotasPagadasAuto });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
@@ -465,7 +509,7 @@ app.get('/api/visacuotas', checkAuth, async (req, res) => {
 
 app.post('/api/visacuotas', checkAuth, async (req, res) => {
   try {
-    const { nombre, establecimiento, fechaCompra, montoTotal, cuotasTotales, tasaMensual, tasaAnual, tipoCuota, estado, notas } = req.body || {};
+    const { nombre, establecimiento, fechaCompra, montoTotal, cuotasTotales, tasaMensual, tasaAnual, tipoCuota, estado, notas, tarjeta } = req.body || {};
     if (!nombre || !montoTotal || !cuotasTotales) return res.status(400).json({ error: 'nombre, montoTotal y cuotasTotales requeridos' });
 
     // Si dio tasa anual, calcular mensual
@@ -476,20 +520,32 @@ app.post('/api/visacuotas', checkAuth, async (req, res) => {
       tasaMens = Number(tasaMensual) / 100;
     }
 
-    const page = await createPage(IDS.visacuotas, {
+    // Auto-pagos: si fechaCompra es anterior a hoy
+    let cuotasPagadasAuto = 0;
+    if (fechaCompra) {
+      const inicio = new Date(fechaCompra);
+      const hoy = new Date();
+      const mesesTranscurridos = Math.max(0, (hoy.getFullYear() - inicio.getFullYear()) * 12 + (hoy.getMonth() - inicio.getMonth()));
+      cuotasPagadasAuto = Math.min(Number(cuotasTotales), mesesTranscurridos);
+    }
+
+    const props = {
       Nombre: { title: [{ text: { content: nombre } }] },
       Establecimiento: establecimiento ? { rich_text: [{ text: { content: establecimiento } }] } : undefined,
       'Fecha compra': fechaCompra ? { date: { start: fechaCompra } } : undefined,
       'Monto total': { number: Number(montoTotal) },
       'Cuotas totales': { number: Number(cuotasTotales) },
-      'Cuotas pagadas': { number: 0 },
+      'Cuotas pagadas': { number: cuotasPagadasAuto },
       'Tasa mensual': { number: tasaMens },
       'Tasa anual': { number: Number(tasaAnual) || 0 },
       'Tipo cuota': { select: { name: tipoCuota || (tasaMens > 0 ? 'Con interes' : 'Sin interes') } },
-      Estado: { select: { name: estado || 'Activa' } },
+      Estado: { select: { name: estado || (cuotasPagadasAuto >= Number(cuotasTotales) ? 'Pagada' : 'Activa') } },
       Notas: notas ? { rich_text: [{ text: { content: notas } }] } : undefined,
-    });
-    res.json({ ok: true, id: page.id });
+      Tarjeta: tarjeta ? { rich_text: [{ text: { content: tarjeta } }] } : undefined,
+    };
+
+    const page = await createPage(IDS.visacuotas, props);
+    res.json({ ok: true, id: page.id, cuotasPagadasAuto });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
@@ -647,7 +703,7 @@ app.use(express.static(path.join(__dirname)));
 app.use((req, res) => res.status(404).json({ error: 'Not found' }));
 
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`💰 Finanzas GT on port ${PORT}`);
+  console.log(`💰 MiFinanza on port ${PORT}`);
   console.log(`   TOKEN: ${NOTION_TOKEN ? 'OK' : 'MISSING'}`);
   console.log(`   PASSWORD: ${APP_PASSWORD ? 'set' : 'open'}`);
 });

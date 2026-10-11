@@ -5,10 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Finanzas GT">
+<meta name="apple-mobile-web-app-title" content="MiFinanza">
 <meta name="theme-color" content="#0a0d10">
 <meta name="description" content="App de finanzas personales">
-<title>💰 Finanzas GT</title>
+<title>💰 MiFinanza</title>
 <link rel="icon" type="image/svg+xml" href="/favicon.ico">
 <link rel="manifest" href="/manifest.json">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -898,7 +898,7 @@ input, select, textarea { font-family: inherit; }
 <!-- AUTH -->
 <div class="auth-overlay show" id="authOverlay">
   <div class="auth-card">
-    <div class="auth-brand">💰 Finanzas GT</div>
+    <div class="auth-brand">💰 MiFinanza</div>
     <div class="auth-subtitle">Introduce tu contraseña</div>
     <input type="password" class="auth-input" id="passwordInput" placeholder="••••••••" autocomplete="off">
     <label class="auth-checkbox">
@@ -1449,6 +1449,12 @@ input, select, textarea { font-family: inherit; }
       <button type="button" class="submit-btn" id="calcVisacuotaBtn" style="background: var(--gold); color: #1c1303;">⚡ Calcular</button>
       <div class="calc-result hidden" id="calcVisacuotaResult"></div>
       <div class="form-field">
+        <label class="form-label">Tarjeta de crédito (opcional)</label>
+        <select class="select" id="visTarjeta">
+          <option value="">Sin tarjeta / contado</option>
+        </select>
+      </div>
+      <div class="form-field">
         <label class="form-label">Notas</label>
         <input type="text" class="input" id="visNotas" placeholder="Opcional">
       </div>
@@ -1720,8 +1726,54 @@ function showToast(msg, type = 'success') {
   t.querySelector('.toast-icon').textContent = type === 'success' ? '✓' : '✕';
   t.querySelector('.toast-text').textContent = msg;
   clearTimeout(t._timer);
-  t._timer = setTimeout(() => t.classList.remove('show'), 3000);
+  t._timer = setTimeout(() => t.className = 'toast', 3000);
 }
+
+/* ---------- MODAL DRAG TO CLOSE (touch + mouse) ---------- */
+(function initModalDrag() {
+  const grabber = document.querySelector('.modal-grabber');
+  if (!grabber) return;
+  let modal = null, startY = 0, currentY = 0, dragging = false;
+
+  function onStart(e) {
+    const target = e.target.closest('.modal');
+    if (!target) return;
+    modal = target;
+    dragging = true;
+    startY = e.touches ? e.touches[0].clientY : e.clientY;
+    currentY = 0;
+    modal.style.transition = 'none';
+  }
+
+  function onMove(e) {
+    if (!dragging || !modal) return;
+    const y = (e.touches ? e.touches[0].clientY : e.clientY) - startY;
+    currentY = Math.max(0, y);
+    modal.style.transform = `translateY(${currentY}px)`;
+    if (e.cancelable) e.preventDefault();
+  }
+
+  function onEnd() {
+    if (!dragging || !modal) return;
+    dragging = false;
+    modal.style.transition = '';
+    if (currentY > 120) {
+      const overlay = modal.closest('.modal-overlay');
+      modal.style.transform = '';
+      if (overlay) overlay.classList.remove('show');
+    } else {
+      modal.style.transform = '';
+    }
+    modal = null;
+  }
+
+  document.addEventListener('mousedown', (e) => { if (e.target.closest('.modal-grabber')) onStart(e); });
+  document.addEventListener('mousemove', onMove);
+  document.addEventListener('mouseup', onEnd);
+  document.addEventListener('touchstart', (e) => { if (e.target.closest('.modal-grabber')) onStart(e); }, { passive: false });
+  document.addEventListener('touchmove', onMove, { passive: false });
+  document.addEventListener('touchend', onEnd);
+})();
 
 /* ---------- API ---------- */
 async function api(path, options = {}) {
@@ -1815,6 +1867,7 @@ async function loadOptions() {
     renderSelect('categoriaSelect', getOptions('Categoria'));
     renderSelect('tipoSelect', getOptions('Tipo'));
     renderSelect('presConcepto', getOptions('Categoria'));
+    renderSelect('visTarjeta', getOptions('Cuenta'));
   } catch (e) {
     showToast('Error cargando opciones: ' + e.message, 'error');
   }
@@ -2382,12 +2435,12 @@ document.addEventListener('click', async (e) => {
     const m = Number(monto);
     if (!m || m <= 0) { showToast('Monto inválido', 'error'); return; }
     try {
-      // Crear movimiento de ingreso vinculado a la meta
+      // Usar el nombre de la meta como cuenta y categoria para tracking
       await api('/api/movements', {
         method: 'POST',
         body: JSON.stringify({
           tipo: 'Ingreso',
-          cuenta: 'Efectivo',
+          cuenta: nombre,
           monto: m,
           categoria: 'Ahorro',
           metaId: id,
@@ -2402,30 +2455,40 @@ document.addEventListener('click', async (e) => {
   if (action === 'pay-cuota') {
     const id = e.target.closest('[data-id]').dataset.id;
     const tipo = e.target.closest('[data-tipo]').dataset.tipo;
-    const monto = prompt('Monto de la cuota (Q):');
-    if (!monto) return;
-    const m = Number(monto);
-    if (!m || m <= 0) { showToast('Monto inválido', 'error'); return; }
-    const cuenta = prompt('¿Desde qué cuenta pagar? (escribe el nombre exacto)');
+    // Obtener el monto automático
+    const all = tipo === 'prestamo' ? ALL_DATA.prestamos : ALL_DATA.visacuotas;
+    const item = all.find(x => x.id === id);
+    if (!item) return;
+    const cuota = props(item.properties, 'Cuota mensual', 0);
+    const pagadas = props(item.properties, 'Cuotas pagadas', 0);
+    const total = props(item.properties, 'Cuotas totales', 0);
+    if (pagadas >= total) { showToast('Ya está completamente pagado', 'success'); return; }
+    const nombre = tipo === 'prestamo' ? props(item.properties, 'Prestamo', '?') : props(item.properties, 'Nombre', '?');
+
+    const cuenta = prompt(`Pagar ${fmt(cuota)} de "${nombre}"\n¿Desde qué cuenta?`);
     if (!cuenta) return;
+
     try {
-      // Crear movimiento de gasto
+      const endpoint = tipo === 'prestamo' ? 'prestamos' : 'visacuotas';
       await api('/api/movements', {
         method: 'POST',
         body: JSON.stringify({
           tipo: 'Gasto diario',
           cuenta: cuenta.trim(),
-          monto: m,
+          monto: cuota,
           categoria: tipo === 'prestamo' ? 'Pago de prestamo' : 'Pago de tarjeta',
-          nota: `Cuota ${tipo}`,
+          nota: `Cuota ${pagadas + 1}/${total} de "${nombre}"`,
+          prestamoId: tipo === 'prestamo' ? id : undefined,
+          visacuotaId: tipo === 'visacuota' ? id : undefined,
         }),
       });
-      // Actualizar cuotas pagadas (esto se haría via PATCH al item, pero simplificamos)
-      showToast('✓ Cuota registrada. Actualiza el contador en Notion.', 'success');
-      cargarTodo();
-    } catch (e) {
-      showToast('Error: ' + e.message, 'error');
-    }
+      await api(`/api/${endpoint}/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ cuotasPagadas: pagadas + 1 }),
+      });
+      showToast(`✓ Cuota pagada (${fmt(cuota)})`, 'success');
+      await cargarTodo();
+    } catch (e) { showToast('Error: ' + e.message, 'error'); }
   }
 });
 
@@ -2560,11 +2623,12 @@ document.getElementById('saveVisacuota').addEventListener('click', async () => {
   const cuotasTotales = Number(document.getElementById('visCuotas').value);
   const tasaMensual = Number(document.getElementById('visTasa').value) || 0;
   const fechaCompra = document.getElementById('visFecha').value;
+  const tarjeta = document.getElementById('visTarjeta').value;
   const notas = document.getElementById('visNotas').value;
   if (!nombre || !montoTotal || !cuotasTotales) { showToast('Completa nombre, monto y cuotas', 'error'); return; }
   try {
     await api('/api/visacuotas', { method: 'POST', body: JSON.stringify({
-      nombre, establecimiento, montoTotal, cuotasTotales, tasaMensual, fechaCompra, notas,
+      nombre, establecimiento, montoTotal, cuotasTotales, tasaMensual, fechaCompra, tarjeta, notas,
     })});
     closeModal('visacuotaModal');
     showToast('✓ Visacuota guardada', 'success');
