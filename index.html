@@ -2274,15 +2274,15 @@ document.getElementById('shortcutRunBtn')?.addEventListener('click', async funct
   const resultEl = document.getElementById('shortcutResult');
   if (!cmd) { showToast('Escribe un comando', 'error'); return; }
   resultEl.style.display = 'block';
-  resultEl.innerText = '⏳ Ejecutando...';
+  resultEl.innerHTML = '⏳ Ejecutando...';
   try {
     const r = await api('/api/shortcuts/ejecutar', {
       method: 'POST',
       body: JSON.stringify({ comando: cmd }),
     });
-    resultEl.innerText = r.respuesta || JSON.stringify(r);
+    resultEl.innerHTML = (r.respuesta || JSON.stringify(r)).replace(/\n/g, '<br>');
     document.getElementById('shortcutInput').value = '';
-  } catch (e) { resultEl.innerText = '❌ ' + e.message; }
+  } catch (e) { resultEl.innerHTML = '❌ ' + e.message; }
 });
 
 /* ---------- TOAST ---------- */
