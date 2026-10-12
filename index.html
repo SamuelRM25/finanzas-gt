@@ -2418,6 +2418,523 @@ function renderDashboardExtras() {
   }).join('');
 }
 
+/* ---------- CALENDARIO DE PAGOS ---------- */
+let CAL_MONTH = new Date().getMonth();
+let CAL_YEAR = new Date().getFullYear();
+let CAL_SELECTED_DAY = null;
+
+function calcCuotaMensual(tasaMens, monto, n) {
+  if (!tasaMens || tasaMens === 0) return monto / n;
+  return monto * (tasaMens * Math.pow(1 + tasaMens, n)) / (Math.pow(1 + tasaMens, n) - 1);
+}
+
+function getUpcomingPayments(monthOffset = 0) {
+  // Devuelve array de pagos: {date, name, type, monto, itemId, isToday, isPast, daysUntil}
+  const now = new Date();
+  const targetMonth = new Date(CAL_YEAR, CAL_MONTH + monthOffset, 1);
+  const year = targetMonth.getFullYear();
+  const month = targetMonth.getMonth();
+  const lastDay = new Date(year, month + 1, 0).getDate();
+
+  const pagos = [];
+
+  // Préstamos: pago el día 1 de cada mes (configurable)
+  ALL_DATA.prestamos.forEach(p => {
+    const pProps = p.properties;
+    const name = props(pProps, 'Prestamo', '?');
+    const total = props(pProps, 'Cuotas totales', 0);
+    const pag = props(pProps, 'Cuotas pagadas', 0);
+    if (pag >= total) return;
+    const cuota = props(pProps, 'Cuota mensual', 0);
+    const inicio = props(pProps, 'Fecha inicio', null);
+    // Si tiene fecha de inicio, calcular el día del mes del pago
+    let diaPago = 1;
+    if (inicio) {
+      const d = new Date(inicio);
+      diaPago = d.getDate();
+    }
+    // Generar pagos desde fecha de inicio hasta completar
+    const inicioDate = inicio ? new Date(inicio) : new Date(year, month, 1);
+    for (let m = 0; m < total; m++) {
+      const payDate = new Date(inicioDate.getFullYear(), inicioDate.getMonth() + m, inicioDate.getDate());
+      if (payDate < new Date(pag === 0 ? inicioDate : new Date(year, month, diaPago))) continue;
+      if (payDate.getMonth() === month && payDate.getFullYear() === year) {
+        const date = new Date(year, month, payDate.getDate());
+        const daysUntil = Math.ceil((date - now) / (1000 * 60 * 60 * 24));
+        pagos.push({
+          date,
+          name: `${name} (cuota ${pag + m + 1}/${total})`,
+          type: 'prestamo',
+          monto: cuota,
+          itemId: p.id,
+          daysUntil,
+          isToday: daysUntil === 0,
+          isPast: daysUntil < 0,
+        });
+      }
+    }
+  });
+
+  // Visacuotas: pago mensual desde fecha de compra
+  ALL_DATA.visacuotas.forEach(v => {
+    const vProps = v.properties;
+    const name = props(vProps, 'Nombre', '?');
+    const total = props(vProps, 'Cuotas totales', 0);
+    const pag = props(vProps, 'Cuotas pagadas', 0);
+    if (pag >= total) return;
+    const cuota = props(vProps, 'Cuota mensual', 0);
+    const fechaCompra = props(vProps, 'Fecha compra', null);
+    if (!fechaCompra) return;
+    const inicioDate = new Date(fechaCompra);
+    let diaPago = inicioDate.getDate();
+    // Ajustar día si el mes no tiene ese día
+    if (diaPago > lastDay) diaPago = lastDay;
+    for (let m = 0; m < total; m++) {
+      const payDate = new Date(inicioDate.getFullYear(), inicioDate.getMonth() + m, inicioDate.getDate());
+      if (payDate.getMonth() === month && payDate.getFullYear() === year) {
+        const daysUntil = Math.ceil((payDate - now) / (1000 * 60 * 60 * 24));
+        pagos.push({
+          date: payDate,
+          name: `${name} (cuota ${pag + m + 1}/${total})`,
+          type: 'visacuota',
+          monto: cuota,
+          itemId: v.id,
+          daysUntil,
+          isToday: daysUntil === 0,
+          isPast: daysUntil < 0,
+        });
+      }
+    }
+  });
+
+  return pagos.sort((a, b) => a.date - b.date);
+}
+
+function renderCalendario() {
+  const grid = document.getElementById('calendarGrid');
+  const summary = document.getElementById('calSummary');
+  const dayTitle = document.getElementById('calDayTitle');
+  const dayList = document.getElementById('calDayList');
+
+  const meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+  summary.innerHTML = `<div class="cal-month-title">${meses[CAL_MONTH]} ${CAL_YEAR}</div>`;
+
+  const firstDay = new Date(CAL_YEAR, CAL_MONTH, 1);
+  const lastDay = new Date(CAL_YEAR, CAL_MONTH + 1, 0);
+  const startWeekday = firstDay.getDay(); // 0=domingo
+  const totalDays = lastDay.getDate();
+
+  const today = new Date();
+  const pagos = getUpcomingPayments(0);
+  const pagosByDay = {};
+  pagos.forEach(p => {
+    const d = p.date.getDate();
+    if (!pagosByDay[d]) pagosByDay[d] = [];
+    pagosByDay[d].push(p);
+  });
+
+  const dias = ['D', 'L', 'M', 'M', 'J', 'V', 'S'];
+  let html = '<div class="cal-weekdays">';
+  dias.forEach(d => html += `<div class="cal-wd">${d}</div>`);
+  html += '</div><div class="cal-days">';
+
+  // Días vacíos antes del primer día
+  for (let i = 0; i < startWeekday; i++) {
+    html += '<div class="cal-day empty"></div>';
+  }
+
+  for (let d = 1; d <= totalDays; d++) {
+    const date = new Date(CAL_YEAR, CAL_MONTH, d);
+    const isToday = date.toDateString() === today.toDateString();
+    const isPast = date < today && !isToday;
+    const dayPagos = pagosByDay[d] || [];
+    const hasOverdue = dayPagos.some(p => p.isPast);
+    const hasToday = dayPagos.some(p => p.isToday);
+    const hasUpcoming = dayPagos.some(p => !p.isPast && p.daysUntil <= 7);
+    const totalMonto = dayPagos.reduce((s, p) => s + (p.monto || 0), 0);
+    const selected = CAL_SELECTED_DAY === d;
+    let cls = 'cal-day';
+    if (isToday) cls += ' today';
+    if (isPast) cls += ' past';
+    if (hasOverdue) cls += ' overdue';
+    if (hasToday) cls += ' duesoon';
+    if (hasUpcoming && !hasToday) cls += ' upcoming';
+    if (dayPagos.length > 0) cls += ' has-payments';
+    if (selected) cls += ' selected';
+    html += `<div class="${cls}" data-cal-day="${d}">
+      <div class="cal-day-num">${d}</div>
+      ${dayPagos.length > 0 ? `<div class="cal-day-monto">${fmt(totalMonto)}</div><div class="cal-day-count">${dayPagos.length} pago${dayPagos.length > 1 ? 's' : ''}</div>` : ''}
+    </div>`;
+  }
+  html += '</div>';
+  grid.innerHTML = html;
+
+  // Mostrar pagos del día seleccionado o del día actual
+  const showDay = CAL_SELECTED_DAY || today.getDate();
+  if (CAL_MONTH === today.getMonth() && CAL_YEAR === today.getFullYear()) {
+    dayTitle.innerText = `Hoy, ${today.getDate()} de ${meses[today.getMonth()]}`;
+  } else {
+    dayTitle.innerText = `${showDay} de ${meses[CAL_MONTH]}`;
+  }
+  const dayPagosToShow = pagosByDay[showDay] || [];
+  if (dayPagosToShow.length === 0) {
+    dayList.innerHTML = '<div class="empty">No hay pagos este día</div>';
+  } else {
+    dayList.innerHTML = dayPagosToShow.map(p => {
+      const icon = p.type === 'prestamo' ? '🏦' : '🛍️';
+      const urgency = p.isPast ? 'vencido' : p.isToday ? 'hoy' : `en ${p.daysUntil}d`;
+      return `<div class="list-item" data-action="${p.type === 'prestamo' ? 'view-prestamo' : 'view-visacuota'}" data-id="${p.itemId}">
+        <div class="list-icon ${p.type}">${icon}</div>
+        <div class="list-info">
+          <div class="list-title">${escapeHtml(p.name)}</div>
+          <div class="list-meta">${urgency} · ${fmt(p.monto)}</div>
+        </div>
+        <button class="text-btn" data-action="pay-cuota" data-id="${p.itemId}" data-tipo="${p.type}">Pagar</button>
+      </div>`;
+    }).join('');
+  }
+
+  // Total del mes
+  const totalMes = pagos.reduce((s, p) => s + (p.monto || 0), 0);
+  summary.innerHTML += `<div class="cal-total">Total del mes: <strong>${fmt(totalMes)}</strong></div>`;
+
+  // Click handlers
+  grid.querySelectorAll('[data-cal-day]').forEach(el => {
+    el.addEventListener('click', () => {
+      CAL_SELECTED_DAY = Number(el.dataset.calDay);
+      renderCalendario();
+    });
+  });
+}
+
+document.getElementById('calPrevMonth').addEventListener('click', () => {
+  CAL_MONTH--;
+  if (CAL_MONTH < 0) { CAL_MONTH = 11; CAL_YEAR--; }
+  CAL_SELECTED_DAY = null;
+  renderCalendario();
+});
+document.getElementById('calNextMonth').addEventListener('click', () => {
+  CAL_MONTH++;
+  if (CAL_MONTH > 11) { CAL_MONTH = 0; CAL_YEAR++; }
+  CAL_SELECTED_DAY = null;
+  renderCalendario();
+});
+
+/* ---------- WIDGET PRÓXIMAS CUOTAS ---------- */
+function renderProximasCuotas() {
+  const cont = document.getElementById('dashboardProximasCuotas');
+  if (!cont) return;
+  const pagos = getUpcomingPayments(0);
+  const proximos = pagos.filter(p => p.daysUntil >= 0).slice(0, 5);
+  if (proximos.length === 0) {
+    cont.innerHTML = '<div class="empty">Sin pagos próximos este mes</div>';
+    return;
+  }
+  cont.innerHTML = proximos.map(p => {
+    const icon = p.type === 'prestamo' ? '🏦' : '🛍️';
+    const urgency = p.isToday ? '🔥 HOY' : `en ${p.daysUntil}d`;
+    const dateLabel = p.date.toLocaleDateString('es-GT', { day: 'numeric', month: 'short' });
+    return `<div class="cuota-mini ${p.isToday ? 'urgent' : ''}">
+      <div class="cuota-mini-icon ${p.type}">${icon}</div>
+      <div class="cuota-mini-info">
+        <div class="cuota-mini-name">${escapeHtml(p.name)}</div>
+        <div class="cuota-mini-meta">${dateLabel} · ${urgency}</div>
+      </div>
+      <div class="cuota-mini-monto">${fmt(p.monto)}</div>
+    </div>`;
+  }).join('');
+}
+
+/* ---------- DETALLE DE CUENTA ---------- */
+let CURRENT_CUENTA = null;
+let CURRENT_CUENTA_FILTER = 'all'; // 'all', 0, -1, -2
+
+function openCuentaDetalle(cuenta) {
+  CURRENT_CUENTA = cuenta;
+  CURRENT_CUENTA_FILTER = 'all';
+  goToPage('cuenta-detalle');
+}
+
+function renderCuentaDetalle() {
+  if (!CURRENT_CUENTA) return;
+  document.getElementById('cuentaDetalleName').innerText = CURRENT_CUENTA.name;
+  document.getElementById('cuentaDetalleBalance').innerHTML = `
+    <div class="balance-eyebrow">Saldo actual</div>
+    <div class="balance-amount">${fmt(CURRENT_CUENTA.balance)}</div>
+    <div class="balance-eyebrow">${CURRENT_CUENTA.icon || ''} ${CURRENT_CUENTA.name}</div>
+  `;
+  // Set preset cuenta on add button
+  const addBtn = document.querySelector('[data-action="add-movimiento"][data-preset-cuenta]');
+  if (addBtn) addBtn.dataset.presetCuenta = CURRENT_CUENTA.name;
+  // Reset filter chip
+  document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+  document.querySelector('.filter-chip[data-filter-mes="all"]').classList.add('active');
+  renderCuentaMovs();
+}
+
+function renderCuentaMovs() {
+  if (!CURRENT_CUENTA) return;
+  const cont = document.getElementById('cuentaDetalleMovs');
+  const titleEl = document.getElementById('cuentaMovsTitle');
+  let movs = ALL_DATA.movimientos.filter(m => {
+    const c = props(m.properties, 'Cuenta', '');
+    return c === CURRENT_CUENTA.name;
+  });
+  const now = new Date();
+  let titleText = 'Movimientos';
+  if (CURRENT_CUENTA_FILTER !== 'all') {
+    const offset = Number(CURRENT_CUENTA_FILTER);
+    const targetMonth = new Date(now.getFullYear(), now.getMonth() + offset, 1);
+    const targetYear = targetMonth.getFullYear();
+    const targetMo = targetMonth.getMonth();
+    movs = movs.filter(m => {
+      const fecha = props(m.properties, 'Fecha', '');
+      if (!fecha) return false;
+      const d = new Date(fecha);
+      return d.getFullYear() === targetYear && d.getMonth() === targetMo;
+    });
+    const mesLabel = targetMonth.toLocaleDateString('es-GT', { month: 'long', year: 'numeric' });
+    titleText = mesLabel.charAt(0).toUpperCase() + mesLabel.slice(1);
+  } else {
+    titleText = 'Todos los movimientos';
+  }
+  titleEl.innerText = `${titleText} · ${movs.length}`;
+  if (movs.length === 0) {
+    cont.innerHTML = '<div class="empty">Sin movimientos en este período</div>';
+    return;
+  }
+  // Ordenar por fecha descendente
+  movs.sort((a, b) => {
+    const fa = props(a.properties, 'Fecha', '');
+    const fb = props(b.properties, 'Fecha', '');
+    return new Date(fb) - new Date(fa);
+  });
+  cont.innerHTML = movs.slice(0, 100).map(m => {
+    const nombre = props(m.properties, 'Nombre', '?');
+    const tipo = props(m.properties, 'Tipo', '?');
+    const cat = props(m.properties, 'Categoria', '');
+    const monto = props(m.properties, 'Monto', 0);
+    const fecha = props(m.properties, 'Fecha', '');
+    const nota = props(m.properties, 'Nota', '');
+    const moneda = props(m.properties, 'Moneda', 'GTQ');
+    const sym = moneda === 'USD' ? '$' : 'Q';
+    const isExpense = tipo.toLowerCase().includes('gasto') || tipo.toLowerCase().includes('pago') || tipo.toLowerCase().includes('compra') || tipo.toLowerCase().includes('transf') || tipo.toLowerCase().includes('retiro');
+    const isIncome = tipo.toLowerCase().includes('ingreso') || tipo.toLowerCase().includes('sueldo') || tipo.toLowerCase().includes('deposito');
+    let sign = '';
+    if (isExpense && !isIncome) sign = '-';
+    else if (isIncome) sign = '+';
+    let cls = 'mov';
+    if (isIncome) cls += ' income';
+    else if (isExpense) cls += ' expense';
+    return `<div class="list-item">
+      <div class="list-icon">${isIncome ? '↑' : '↓'}</div>
+      <div class="list-info">
+        <div class="list-title">${escapeHtml(nombre)}</div>
+        <div class="list-meta">${escapeHtml(fecha)} · ${escapeHtml(cat)}</div>
+      </div>
+      <div class="list-amount ${isIncome ? 'income' : 'expense'}">${sign}${sym}${Math.abs(monto).toFixed(2)}</div>
+    </div>`;
+  }).join('');
+}
+
+document.addEventListener('click', (e) => {
+  const chip = e.target.closest('.filter-chip');
+  if (chip) {
+    document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+    chip.classList.add('active');
+    CURRENT_CUENTA_FILTER = chip.dataset.filterMes;
+    renderCuentaMovs();
+  }
+});
+
+/* ---------- CLICK EN CUENTA (cuentas list) ---------- */
+document.addEventListener('click', (e) => {
+  const cuentaItem = e.target.closest('[data-cuenta-nombre]');
+  if (cuentaItem && !e.target.closest('button')) {
+    const name = cuentaItem.dataset.cuentaNombre;
+    const balance = Number(cuentaItem.dataset.cuentaBalance || 0);
+    const icon = cuentaItem.dataset.cuentaIcon || '';
+    openCuentaDetalle({ name, balance, icon });
+  }
+});
+
+
+
+  // Préstamos + visacuotas
+  const prestContainer = document.getElementById('dashboardPrestamos');
+  const activos = [];
+  ALL_DATA.prestamos.filter(p => props(p.properties, 'Estado', '') === 'En curso').forEach(p => {
+    const tot = props(p.properties, 'Cuotas totales', 0);
+    const pag = props(p.properties, 'Cuotas pagadas', 0);
+    if (pag < tot) {
+      activos.push({
+        nombre: props(p.properties, 'Prestamo', '?'),
+        restantes: tot - pag,
+        cuota: props(p.properties, 'Cuota mensual', 0),
+        tipo: '🏦',
+        class: 'loan',
+      });
+    }
+  });
+  ALL_DATA.visacuotas.filter(v => props(v.properties, 'Estado', '') === 'Activa').forEach(v => {
+    const tot = props(v.properties, 'Cuotas totales', 0);
+    const pag = props(v.properties, 'Cuotas pagadas', 0);
+    if (pag < tot) {
+      activos.push({
+        nombre: props(v.properties, 'Nombre', '?'),
+        restantes: tot - pag,
+        cuota: props(v.properties, 'Cuota mensual', 0),
+        tipo: '🛍️',
+        class: 'visa',
+      });
+    }
+  });
+  if (activos.length === 0) {
+    prestContainer.innerHTML = '<div class="empty"><div class="empty-icon">✓</div>Sin cuotas pendientes</div>';
+  } else {
+    prestContainer.innerHTML = activos.slice(0, 4).map(a => `
+      <div class="list-item">
+        <div class="list-icon ${a.class}">${a.tipo}</div>
+        <div class="list-info">
+          <div class="list-title">${escapeHtml(a.nombre)}</div>
+          <div class="list-meta">${a.restantes} cuotas · ${fmt(a.cuota)}/mes</div>
+        </div>
+      </div>
+    `).join('');
+  }
+}
+
+/* ---------- RENDER FUNCTIONS ---------- */
+function renderMovimientos() {
+  const cont = document.getElementById('movimientosList');
+  if (ALL_DATA.movimientos.length === 0) {
+    cont.innerHTML = '<div class="empty"><div class="empty-icon">○</div>Sin movimientos este mes</div>';
+    return;
+  }
+  const sorted = [...ALL_DATA.movimientos].sort((a, b) => (props(b.properties, 'Fecha', '') || '').localeCompare(props(a.properties, 'Fecha', '') || ''));
+  cont.innerHTML = sorted.slice(0, 50).map(m => {
+    const p = m.properties;
+    const tipo = props(p, 'Tipo', '');
+    const cat = props(p, 'Categoria', '');
+    const cuenta = props(p, 'Cuenta', '');
+    const fecha = props(p, 'Fecha', '');
+    const nota = props(p, 'Nota', '');
+    const signo = props(p, 'Signo', 0);
+    const moneda = props(p, 'Moneda', 'GTQ');
+    const esIngreso = signo > 0;
+    const esTransfer = tipo === 'Transferencia';
+    const esPagoTC = tipo === 'Pago de tarjeta';
+    const icon = esIngreso ? '↑' : esTransfer ? '↔' : esPagoTC ? '💳' : '↓';
+    const iconClass = esIngreso ? 'income' : esTransfer ? 'transfer' : 'expense';
+    return `<div class="list-item">
+      <div class="list-icon ${iconClass}">${icon}</div>
+      <div class="list-info">
+        <div class="list-title">${escapeHtml(cat)}${nota ? ' · ' + escapeHtml(nota) : ''}</div>
+        <div class="list-meta"><span>${fmtFecha(fecha)}</span> · <span>${escapeHtml(cuenta)}</span> · <span>${escapeHtml(tipo)}</span>${moneda !== 'GTQ' ? ' · ' + moneda : ''}</div>
+      </div>
+      <div class="list-amount ${esIngreso ? 'income' : 'expense'}">${esIngreso ? '+' : ''}${fmt(signo, moneda)}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderPresupuestos() {
+  const cont = document.getElementById('presupuestoList');
+  if (ALL_DATA.presupuestos.length === 0) {
+    cont.innerHTML = '<div class="empty"><div class="empty-icon">📊</div>Sin presupuesto. Toca "+ Agregar"</div>';
+    return;
+  }
+  cont.innerHTML = ALL_DATA.presupuestos.map(p => {
+    const cat = props(p.properties, 'Categoria', '?');
+    const lim = props(p.properties, 'Limite mensual', 0);
+    const estado = props(p.properties, 'Estado', 'Pendiente');
+    const fecha = props(p.properties, 'Fecha limite', '');
+    return `<div class="list-item">
+      <div class="list-icon" style="background: ${estado === 'Pagado' ? 'var(--jade-glow)' : 'var(--gold-glow)'}; color: ${estado === 'Pagado' ? 'var(--jade-bright)' : 'var(--gold)'};">${estado === 'Pagado' ? '✓' : '!'}</div>
+      <div class="list-info">
+        <div class="list-title">${escapeHtml(cat)}</div>
+        <div class="list-meta">${fmt(lim)}${fecha ? ' · vence ' + fmtFecha(fecha) : ''} · ${estado}</div>
+      </div>
+      ${estado !== 'Pagado' ? `<button class="text-btn" data-action="mark-presupuesto-paid" data-id="${p.id}">Marcar pagado</button>` : ''}
+    </div>`;
+  }).join('');
+}
+
+function renderMetas() {
+  const cont = document.getElementById('metasList');
+  if (ALL_DATA.metas.length === 0) {
+    cont.innerHTML = '<div class="empty"><div class="empty-icon">+</div>Sin metas. Toca "+ Agregar"</div>';
+    return;
+  }
+  cont.innerHTML = ALL_DATA.metas.map(m => {
+    const name = props(m.properties, 'Meta', '?');
+    const obj = props(m.properties, 'Monto objetivo', 0);
+    const saved = props(m.properties, 'Ahorrado', 0);
+    const estado = props(m.properties, 'Estado', 'Activa');
+    const estrategia = props(m.properties, 'Estrategia', '');
+    const pct = obj > 0 ? Math.min(100, (saved / obj) * 100) : 0;
+    return `<div class="list-item">
+      <div class="list-icon goal">★</div>
+      <div class="list-info">
+        <div class="list-title">${escapeHtml(name)}</div>
+        <div class="list-meta">${fmt(saved)} / ${fmt(obj)} · ${pct.toFixed(0)}%${estrategia ? ' · ' + estrategia : ''}</div>
+        <div class="progress-bar"><div class="progress-fill gold" style="width: ${pct}%"></div></div>
+      </div>
+      <div class="list-amount gold">${fmt(obj - saved)}</div>
+      <button class="text-btn" data-action="add-money-meta" data-id="${m.id}" data-nombre="${escapeHtml(name)}">+ Aportar</button>
+    </div>`;
+  }).join('');
+}
+
+function renderPrestamos() {
+  const cont = document.getElementById('prestamosList');
+  if (ALL_DATA.prestamos.length === 0) {
+    cont.innerHTML = '<div class="empty"><div class="empty-icon">🏦</div>Sin préstamos. Toca "+ Agregar"</div>';
+    return;
+  }
+  cont.innerHTML = ALL_DATA.prestamos.map(p => {
+    const name = props(p.properties, 'Prestamo', '?');
+    const total = props(p.properties, 'Cuotas totales', 0);
+    const pag = props(p.properties, 'Cuotas pagadas', 0);
+    const cuota = props(p.properties, 'Cuota mensual', 0);
+    const totalPagar = props(p.properties, 'Total a pagar', 0);
+    const restantes = total - pag;
+    return `<div class="list-item" data-action="view-prestamo" data-id="${p.id}">
+      <div class="list-icon loan">🏦</div>
+      <div class="list-info">
+        <div class="list-title">${escapeHtml(name)}</div>
+        <div class="list-meta">${restantes}/${total} cuotas · ${fmt(cuota)}/mes · total ${fmt(totalPagar)}</div>
+        <div class="progress-bar"><div class="progress-fill" style="width: ${total > 0 ? (pag/total*100) : 0}%"></div></div>
+      </div>
+      ${restantes > 0 ? `<button class="text-btn" data-action="pay-cuota" data-id="${p.id}" data-tipo="prestamo">Pagar</button>` : ''}
+    </div>`;
+  }).join('');
+}
+
+function renderVisacuotas() {
+  const cont = document.getElementById('visacuotasList');
+  if (ALL_DATA.visacuotas.length === 0) {
+    cont.innerHTML = '<div class="empty"><div class="empty-icon">🛍️</div>Sin visacuotas. Toca "+ Agregar"</div>';
+    return;
+  }
+  cont.innerHTML = ALL_DATA.visacuotas.map(v => {
+    const name = props(v.properties, 'Nombre', '?');
+    const total = props(v.properties, 'Cuotas totales', 0);
+    const pag = props(v.properties, 'Cuotas pagadas', 0);
+    const cuota = props(v.properties, 'Cuota mensual', 0);
+    const saldo = props(v.properties, 'Saldo pendiente', 0);
+    const restantes = total - pag;
+    return `<div class="list-item" data-action="view-visacuota" data-id="${v.id}">
+      <div class="list-icon visa">🛍️</div>
+      <div class="list-info">
+        <div class="list-title">${escapeHtml(name)}</div>
+        <div class="list-meta">${restantes}/${total} · ${fmt(cuota)}/mes · ${fmt(saldo)} restante</div>
+        <div class="progress-bar"><div class="progress-fill" style="width: ${total > 0 ? (pag/total*100) : 0}%"></div></div>
+      </div>
+      ${restantes > 0 ? `<button class="text-btn" data-action="pay-cuota" data-id="${v.id}" data-tipo="visacuota">Pagar</button>` : ''}
+    </div>`;
+  }).join('');
+}
+
 /* ---------- ACTIONS (mark paid, pay cuota, etc.) ---------- */
 document.addEventListener('click', async (e) => {
   const action = e.target.closest('[data-action]')?.dataset.action;
