@@ -2547,7 +2547,7 @@ document.getElementById('saveMeta').addEventListener('click', async () => {
   } catch (e) { showToast('Error: ' + e.message, 'error'); }
 });
 
-/* ---------- ADD PRESTAMO + CALC ----------
+/* ---------- ADD PRESTAMO + CALC ---------- */
 document.getElementById('calcPrestamoBtn').addEventListener('click', async () => {
   const monto = Number(document.getElementById('presMonto').value);
   const tasa = Number(document.getElementById('presTasa').value) || 0;
