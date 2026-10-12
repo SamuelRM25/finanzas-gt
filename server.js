@@ -434,7 +434,9 @@ app.post('/api/prestamos', checkAuth, async (req, res) => {
     if (!prestamo || !montoTotal || !cuotasTotales) return res.status(400).json({ error: 'prestamo, montoTotal y cuotasTotales requeridos' });
 
     // Calcular cuota mensual
-    const r = tasaInteres || 0;
+    let r = Number(tasaInteres) || 0;
+    if (tipoTasa === 'Anual') r = r / 12 / 100;
+    else r = r / 100;
     const n = Number(cuotasTotales);
     const P = Number(montoTotal);
     let cuota = 0;
