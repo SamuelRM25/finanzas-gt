@@ -15,6 +15,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 <style>
 /* ============================================
    DESIGN TOKENS
@@ -152,7 +153,31 @@ input, select, textarea { font-family: inherit; }
 }
 .auth-btn:hover { background: var(--jade-bright); }
 .auth-btn:active { transform: scale(0.98); }
+.auth-btn-secondary {
+  width: 100%; padding: 10px; background: var(--bg-2); color: var(--text-1);
+  border: 1px solid var(--border); border-radius: var(--radius-md);
+  font-weight: 500; font-size: 13px; cursor: pointer; transition: all 0.15s;
+}
+.auth-btn-secondary:hover { background: var(--bg-3); border-color: var(--border-strong); }
 .auth-error { color: var(--coral); font-size: 13px; margin-top: 8px; min-height: 18px; }
+
+/* ---------- PIN PAD (#42) ---------- */
+.pin-dot {
+  width: 14px; height: 14px; border-radius: 50%;
+  background: var(--bg-input); border: 2px solid var(--border);
+  transition: all 0.15s;
+}
+.pin-dot.filled { background: var(--jade-bright); border-color: var(--jade-bright); transform: scale(1.15); }
+.pin-key {
+  aspect-ratio: 1.5; background: var(--bg-2); border: 1px solid var(--border);
+  border-radius: 12px; font-size: 22px; font-weight: 500; color: var(--text-1);
+  cursor: pointer; transition: all 0.1s; display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-mono);
+}
+.pin-key:hover { background: var(--bg-3); }
+.pin-key:active { transform: scale(0.95); background: var(--jade-dim); }
+.pin-key.action { background: var(--bg-1); font-size: 14px; color: var(--text-2); }
+.pin-key.empty { visibility: hidden; }
 .auth-checkbox {
   display: flex; align-items: center; gap: 10px;
   font-size: 13px;
@@ -475,6 +500,61 @@ input, select, textarea { font-family: inherit; }
 
 /* ---------- WIDGET PRÓXIMAS CUOTAS ---------- */
 .cuota-mini { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+
+/* ---------- WIDGET PROYECCIÓN ---------- */
+.proyeccion-card {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.proyeccion-main {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+.proyeccion-label { font-size: 11px; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.05em; }
+.proyeccion-amount { font-family: var(--font-mono); font-size: 28px; font-weight: 700; }
+.proyeccion-amount.positive { color: var(--jade-bright); }
+.proyeccion-amount.negative { color: var(--coral); }
+.proyeccion-amount.warning { color: var(--gold); }
+.proyeccion-breakdown {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--border-1);
+}
+.proyeccion-stat { text-align: center; }
+.proyeccion-stat-value { font-family: var(--font-mono); font-size: 14px; font-weight: 600; }
+.proyeccion-stat-label { font-size: 10px; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.04em; margin-top: 2px; }
+.proyeccion-bar { height: 6px; background: var(--bg-input); border-radius: 999px; overflow: hidden; margin-top: 4px; }
+.proyeccion-bar-fill { height: 100%; background: linear-gradient(90deg, var(--jade), var(--jade-bright)); transition: width 0.5s; }
+.proyeccion-bar-fill.warning { background: linear-gradient(90deg, var(--gold), var(--coral)); }
+.proyeccion-bar-fill.danger { background: linear-gradient(90deg, var(--coral), var(--red)); }
+.proyeccion-loading { padding: 12px 0; color: var(--text-3); font-size: 13px; }
+
+/* ---------- WIDGET SUSCRIPCIONES (#28) ---------- */
+.suscripcion-item {
+  display: flex; align-items: center; gap: 10px; padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+.suscripcion-item:last-child { border-bottom: none; }
+.suscripcion-icon { font-size: 20px; width: 36px; text-align: center; }
+.suscripcion-info { flex: 1; min-width: 0; }
+.suscripcion-name { font-size: 14px; font-weight: 500; }
+.suscripcion-meta { font-size: 11px; color: var(--text-3); margin-top: 2px; }
+.suscripcion-amount { font-family: var(--font-mono); font-size: 14px; font-weight: 600; }
+.suscripcion-amount.warning { color: var(--coral); }
+.suscripcion-delta {
+  display: inline-block; margin-left: 6px; padding: 1px 6px;
+  font-size: 10px; border-radius: 999px;
+  background: rgba(244, 114, 182, 0.15); color: var(--coral);
+  font-weight: 600;
+}
 .cuota-mini:last-child { border-bottom: none; }
 .cuota-mini.urgent { background: rgba(244, 114, 182, 0.06); margin: 0 -8px; padding: 10px 8px; border-radius: 8px; }
 .cuota-mini-icon { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 14px; background: var(--bg-3); flex-shrink: 0; }
@@ -819,6 +899,46 @@ input, select, textarea { font-family: inherit; }
   padding: 20px 20px calc(20px + var(--safe-bottom));
   animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
+
+/* ---------- MODAL: BÚSQUEDA GLOBAL (#34) ---------- */
+.search-modal { padding-top: 12px; }
+.search-input-wrap {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 14px; background: var(--bg-input);
+  border: 1px solid var(--border); border-radius: 12px;
+  margin-bottom: 12px;
+}
+.search-icon { font-size: 18px; opacity: 0.6; }
+.search-input {
+  flex: 1; background: transparent; border: none; outline: none;
+  font-size: 16px; color: var(--text-1); font-family: var(--font-sans);
+}
+.search-kbd {
+  font-family: var(--font-mono); font-size: 10px;
+  padding: 2px 6px; background: var(--bg-2); border: 1px solid var(--border);
+  border-radius: 4px; color: var(--text-3);
+}
+.search-results { max-height: 60vh; overflow-y: auto; }
+.search-empty { padding: 24px; text-align: center; color: var(--text-3); font-size: 13px; }
+.search-section-title {
+  font-size: 10px; color: var(--text-3); text-transform: uppercase;
+  letter-spacing: 0.05em; padding: 8px 12px 4px; font-weight: 600;
+}
+.search-result {
+  display: flex; align-items: center; gap: 10px; padding: 10px 12px;
+  border-radius: 8px; cursor: pointer; transition: background 0.15s;
+}
+.search-result:hover, .search-result.active { background: var(--bg-2); }
+.search-result-icon { font-size: 18px; width: 32px; text-align: center; }
+.search-result-info { flex: 1; min-width: 0; }
+.search-result-title { font-size: 14px; color: var(--text-1); font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.search-result-meta { font-size: 11px; color: var(--text-3); margin-top: 2px; }
+.search-result-amount { font-family: var(--font-mono); font-size: 13px; font-weight: 600; }
+.search-result-amount.income { color: var(--jade-bright); }
+.search-result-amount.expense { color: var(--coral); }
+.search-no-results { padding: 24px; text-align: center; color: var(--text-3); font-size: 13px; }
+.search-no-results-icon { font-size: 32px; opacity: 0.3; margin-bottom: 8px; }
+mark.search-highlight { background: rgba(251, 191, 36, 0.3); color: var(--text-1); padding: 0 2px; border-radius: 2px; }
 @media (min-width: 600px) {
   .modal { border-radius: var(--radius-xl); border: 1px solid var(--border-strong); }
 }
@@ -975,14 +1095,48 @@ input, select, textarea { font-family: inherit; }
 <div class="auth-overlay show" id="authOverlay">
   <div class="auth-card">
     <div class="auth-brand">💰 MiFinanza</div>
-    <div class="auth-subtitle">Introduce tu contraseña</div>
-    <input type="password" class="auth-input" id="passwordInput" placeholder="••••••••" autocomplete="off">
-    <label class="auth-checkbox">
-      <input type="checkbox" id="rememberSession" checked>
-      <span>Recordar sesión (no volver a preguntar)</span>
-    </label>
-    <button class="auth-btn" id="authBtn">Entrar</button>
-    <div class="auth-error" id="authError"></div>
+    <!-- Modo contraseña (default) -->
+    <div id="authPasswordMode">
+      <div class="auth-subtitle" id="authSubtitle">Introduce tu contraseña</div>
+      <input type="password" class="auth-input" id="passwordInput" placeholder="••••••••" autocomplete="off">
+      <label class="auth-checkbox">
+        <input type="checkbox" id="rememberSession" checked>
+        <span>Recordar sesión (no volver a preguntar)</span>
+      </label>
+      <button class="auth-btn" id="authBtn">Entrar</button>
+      <div class="auth-error" id="authError"></div>
+      <div id="biometricQuickAccess" style="display:none; margin-top: 16px; display: flex; gap: 8px;">
+        <button class="auth-btn-secondary" id="biometricBtn" style="flex:1;">🔓 Usar biometría</button>
+        <button class="auth-btn-secondary" id="pinBtn" style="flex:1;">🔢 Usar PIN</button>
+      </div>
+    </div>
+    <!-- Modo PIN -->
+    <div id="authPinMode" style="display:none;">
+      <div class="auth-subtitle">Ingresa tu PIN de 4 dígitos</div>
+      <div id="pinDots" style="display: flex; justify-content: center; gap: 12px; margin: 20px 0;">
+        <div class="pin-dot"></div>
+        <div class="pin-dot"></div>
+        <div class="pin-dot"></div>
+        <div class="pin-dot"></div>
+      </div>
+      <div id="pinPad" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; max-width: 280px; margin: 0 auto;"></div>
+      <button class="auth-btn-secondary" id="pinBackBtn" style="width:100%; margin-top: 12px;">← Volver a contraseña</button>
+      <div class="auth-error" id="authPinError"></div>
+    </div>
+    <!-- Modo configurar PIN -->
+    <div id="authSetPinMode" style="display:none;">
+      <div class="auth-subtitle">Configura un PIN de 4 dígitos</div>
+      <div style="font-size: 12px; color: var(--text-3); margin: 8px 0;">Lo usarás para acceso rápido junto con biometría.</div>
+      <div id="setPinDots" style="display: flex; justify-content: center; gap: 12px; margin: 20px 0;">
+        <div class="pin-dot"></div>
+        <div class="pin-dot"></div>
+        <div class="pin-dot"></div>
+        <div class="pin-dot"></div>
+      </div>
+      <div id="setPinPad" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; max-width: 280px; margin: 0 auto;"></div>
+      <div id="setPinStatus" style="font-size: 12px; color: var(--text-3); margin-top: 12px; text-align: center;"></div>
+      <button class="auth-btn-secondary" id="setPinBackBtn" style="width:100%; margin-top: 12px;">Cancelar</button>
+    </div>
   </div>
 </div>
 
@@ -1001,6 +1155,7 @@ input, select, textarea { font-family: inherit; }
     </div>
     <div class="month-pill" id="monthPill">—</div>
     <div class="topbar-actions">
+      <button class="icon-btn" id="searchBtn" title="Buscar (Ctrl/Cmd + K)">🔍</button>
       <button class="icon-btn" id="refreshBtn" title="Actualizar">↻</button>
     </div>
   </header>
@@ -1103,6 +1258,28 @@ input, select, textarea { font-family: inherit; }
       <div id="dashboardProximasCuotas">
         <div class="empty">Cargando…</div>
       </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header">
+        <div>
+          <div class="section-eyebrow">Proyección</div>
+          <div class="section-title">Saldo a fin de mes</div>
+        </div>
+      </div>
+      <div id="dashboardProyeccion" class="proyeccion-card">
+        <div class="proyeccion-loading">Calculando…</div>
+      </div>
+    </div>
+
+    <div class="section" id="suscripcionesSection" style="display:none;">
+      <div class="section-header">
+        <div>
+          <div class="section-eyebrow">Recurrentes</div>
+          <div class="section-title">Suscripciones detectadas</div>
+        </div>
+      </div>
+      <div id="dashboardSuscripciones"></div>
     </div>
   </div>
 
@@ -1281,6 +1458,21 @@ input, select, textarea { font-family: inherit; }
     </button>
   </nav>
 
+  <!-- ============ MODAL: BÚSQUEDA GLOBAL (#34) ============ -->
+  <div class="modal-overlay" id="searchModal">
+    <div class="modal search-modal">
+      <div class="modal-grabber"></div>
+      <div class="search-input-wrap">
+        <span class="search-icon">🔍</span>
+        <input type="text" class="search-input" id="globalSearchInput" placeholder="Buscar movimientos, visacuotas, préstamos, metas..." autocomplete="off">
+        <kbd class="search-kbd">esc</kbd>
+      </div>
+      <div class="search-results" id="globalSearchResults">
+        <div class="search-empty">Empieza a escribir para buscar...</div>
+      </div>
+    </div>
+  </div>
+
   <!-- ============ MODAL: MORE ============ -->
   <div class="modal-overlay" id="moreModal">
     <div class="modal">
@@ -1330,6 +1522,13 @@ input, select, textarea { font-family: inherit; }
           <div class="list-info">
             <div class="list-title">Escanear recibo</div>
             <div class="list-meta">OCR con foto</div>
+          </div>
+        </button>
+        <button class="list-item" data-action="generate-pdf" style="width:100%; text-align:left; background:none;">
+          <div class="list-icon" style="background: rgba(239, 68, 68, 0.15); color: #ef4444;">📄</div>
+          <div class="list-info">
+            <div class="list-title">Reporte mensual PDF</div>
+            <div class="list-meta">Descargar mes actual</div>
           </div>
         </button>
         <button class="list-item" data-action="open-simulador" style="width:100%; text-align:left; background:none;">
@@ -1840,6 +2039,45 @@ input, select, textarea { font-family: inherit; }
       </p>
       <button type="button" class="submit-btn" style="background: var(--coral); color: #fff;" id="logoutBtn">Cerrar sesión</button>
 
+      <h3 style="margin: 24px 0 8px; font-family: var(--font-display); font-size: 18px;">🔔 Telegram (#40)</h3>
+      <p style="color: var(--text-dim); font-size: 12px; margin-bottom: 8px;">
+        Conecta un bot de Telegram para recibir notificaciones y registrar gastos por chat.
+      </p>
+      <div id="telegramStatus" style="padding: 10px 14px; background: var(--bg-input); border-radius: 8px; margin-bottom: 8px; font-size: 12px;">
+        ⏳ Verificando...
+      </div>
+      <div class="form-field">
+        <label class="form-label">Bot Token (de @BotFather)</label>
+        <input type="text" class="input" id="telegramBotToken" placeholder="123456:ABC-DEF...">
+      </div>
+      <div class="form-field">
+        <label class="form-label">Chat ID</label>
+        <input type="text" class="input" id="telegramChatId" placeholder="123456789">
+      </div>
+      <div style="display: flex; gap: 8px;">
+        <button type="button" class="submit-btn" style="background: var(--jade-dim); color: var(--jade-bright); border: 1px solid var(--jade); flex: 1;" id="telegramTestBtn">Probar</button>
+        <button type="button" class="submit-btn" style="background: var(--gold); color: #1c1303; flex: 1;" id="telegramSaveBtn">Guardar</button>
+      </div>
+      <details style="margin-top: 12px;">
+        <summary style="cursor: pointer; font-size: 12px; color: var(--text-2); font-weight: 500;">📖 Comandos disponibles</summary>
+        <div style="padding: 12px; background: var(--bg-input); border-radius: 8px; margin-top: 8px; font-size: 12px; line-height: 1.6;">
+          <div><code style="background: var(--bg-2); padding: 2px 6px; border-radius: 4px;">gasté Q50 almuerzo</code> — Registra gasto</div>
+          <div><code style="background: var(--bg-2); padding: 2px 6px; border-radius: 4px;">gasté $20 uber</code> — Gasto en USD</div>
+          <div><code style="background: var(--bg-2); padding: 2px 6px; border-radius: 4px;">ingreso Q5000 sueldo</code> — Registra ingreso</div>
+          <div><code style="background: var(--bg-2); padding: 2px 6px; border-radius: 4px;">saldo</code> — Balance del mes</div>
+          <div><code style="background: var(--bg-2); padding: 2px 6px; border-radius: 4px;">próximos</code> — Pagos próximos (7d)</div>
+          <div><code style="background: var(--bg-2); padding: 2px 6px; border-radius: 4px;">hoy</code> — Movimientos de hoy</div>
+        </div>
+      </details>
+      <details style="margin-top: 8px;">
+        <summary style="cursor: pointer; font-size: 12px; color: var(--text-2); font-weight: 500;">🔌 Atajos desde la app</summary>
+        <div style="padding: 12px; background: var(--bg-input); border-radius: 8px; margin-top: 8px; font-size: 12px;">
+          <input type="text" class="input" id="shortcutInput" placeholder='Ej: "gasté Q120 en super"' style="margin-bottom: 8px;">
+          <button class="submit-btn" style="background: var(--jade-dim); color: var(--jade-bright); width: 100%;" id="shortcutRunBtn">Ejecutar comando</button>
+          <div id="shortcutResult" style="margin-top: 8px; padding: 8px; background: var(--bg-2); border-radius: 6px; font-size: 11px; display: none;"></div>
+        </div>
+      </details>
+
       <button type="button" class="submit-btn income" id="saveSettingsBtn" style="margin-top: 8px;">Guardar ajustes</button>
     </div>
   </div>
@@ -1955,6 +2193,10 @@ document.getElementById('passwordInput').addEventListener('keypress', (e) => {
       return;
     }
   }
+  // Si hay PIN configurado, mostrar botones de acceso rápido
+  if (localStorage.getItem(PIN_STORAGE_KEY)) {
+    document.getElementById('biometricQuickAccess').style.display = 'flex';
+  }
   setTimeout(() => document.getElementById('passwordInput').focus(), 300);
 })();
 
@@ -1980,6 +2222,67 @@ document.getElementById('logoutBtn').addEventListener('click', () => {
   clearPassword();
   closeModal('settingsModal');
   location.reload();
+});
+
+/* ---------- TELEGRAM INTEGRATION (#40) ---------- */
+async function loadTelegramStatus() {
+  const el = document.getElementById('telegramStatus');
+  try {
+    const r = await api('/api/integrations/status');
+    if (r.telegram.configured) {
+      el.innerHTML = '✅ <b style="color: var(--jade-bright);">Telegram activo</b><br><span style="font-size: 11px;">Webhook: <code>' + r.webhookUrl + '</code></span>';
+    } else {
+      el.innerHTML = '⚠️ <b>Telegram no configurado</b><br><span style="font-size: 11px;">Configura el bot abajo y agrega las env vars en Render.</span>';
+    }
+  } catch (e) {
+    el.innerHTML = '❌ Error: ' + e.message;
+  }
+}
+
+document.addEventListener('click', async function(e) {
+  if (e.target.closest('[data-action="open-settings"]')) {
+    setTimeout(loadTelegramStatus, 100);
+  }
+});
+
+document.getElementById('telegramTestBtn')?.addEventListener('click', async function() {
+  const token = document.getElementById('telegramBotToken').value.trim();
+  const chatId = document.getElementById('telegramChatId').value.trim();
+  if (!token || !chatId) { showToast('Completa token y chat ID', 'error'); return; }
+  try {
+    const r = await api('/api/integrations/telegram', {
+      method: 'POST',
+      body: JSON.stringify({ botToken: token, chatId: chatId }),
+    });
+    if (r.ok) showToast('✓ Mensaje enviado a Telegram', 'success');
+    else showToast('Error: ' + (r.error || 'desconocido'), 'error');
+  } catch (e) { showToast('Error: ' + e.message, 'error'); }
+});
+
+document.getElementById('telegramSaveBtn')?.addEventListener('click', async function() {
+  const token = document.getElementById('telegramBotToken').value.trim();
+  const chatId = document.getElementById('telegramChatId').value.trim();
+  if (!token || !chatId) { showToast('Completa token y chat ID', 'error'); return; }
+  // Guardar en localStorage como referencia, pero recordatorio: requiere env vars
+  localStorage.setItem('mifinanza_telegram_token', token);
+  localStorage.setItem('mifinanza_telegram_chat', chatId);
+  showToast('✓ Guardado en este dispositivo. Para que el servidor envíe mensajes, agrega TELEGRAM_BOT_TOKEN y TELEGRAM_CHAT_ID en Render → Environment.', 'info', 6000);
+});
+
+document.getElementById('shortcutRunBtn')?.addEventListener('click', async function() {
+  const cmd = document.getElementById('shortcutInput').value.trim();
+  const resultEl = document.getElementById('shortcutResult');
+  if (!cmd) { showToast('Escribe un comando', 'error'); return; }
+  resultEl.style.display = 'block';
+  resultEl.innerText = '⏳ Ejecutando...';
+  try {
+    const r = await api('/api/shortcuts/ejecutar', {
+      method: 'POST',
+      body: JSON.stringify({ comando: cmd }),
+    });
+    resultEl.innerText = r.respuesta || JSON.stringify(r);
+    document.getElementById('shortcutInput').value = '';
+  } catch (e) { resultEl.innerText = '❌ ' + e.message; }
 });
 
 /* ---------- TOAST ---------- */
@@ -2442,6 +2745,8 @@ async function cargarTodo() {
   actualizarStats();
   renderDashboardExtras();
   renderProximasCuotas();
+  renderProyeccion();
+  renderSuscripciones();
 }
 
 async function loadMovimientos() {
@@ -3242,6 +3547,7 @@ document.getElementById('calcSimVisaBtn').addEventListener('click', async () => 
 
 /* ---------- REFRESH ---------- */
 document.getElementById('refreshBtn').addEventListener('click', () => cargarTodo());
+document.getElementById('searchBtn').addEventListener('click', () => openSearch());
 
 /* ---------- DETALLE DE CUENTA ---------- */
 let CURRENT_CUENTA = null;
@@ -3542,6 +3848,523 @@ function renderProximasCuotas() {
   }).join('');
 }
 
+/* ---------- BÚSQUEDA GLOBAL (#34) ---------- */
+let SEARCH_RESULTS = [];
+let SEARCH_ACTIVE_IDX = 0;
+
+document.addEventListener('keydown', function(e) {
+  // Cmd/Ctrl + K para abrir búsqueda
+  if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+    e.preventDefault();
+    openSearch();
+  }
+  // Escape para cerrar
+  if (e.key === 'Escape' && document.getElementById('searchModal').classList.contains('show')) {
+    closeModal('searchModal');
+  }
+});
+
+function openSearch() {
+  openModal('searchModal');
+  setTimeout(function() {
+    document.getElementById('globalSearchInput').focus();
+  }, 100);
+  runSearch('');
+}
+
+function highlightMatch(text, query) {
+  if (!query) return escapeHtml(text);
+  const escaped = escapeHtml(text);
+  const q = query.toLowerCase();
+  const lower = escaped.toLowerCase();
+  const idx = lower.indexOf(q);
+  if (idx === -1) return escaped;
+  return escaped.substring(0, idx) + '<mark class="search-highlight">' + escaped.substring(idx, idx + query.length) + '</mark>' + escaped.substring(idx + query.length);
+}
+
+function runSearch(query) {
+  const cont = document.getElementById('globalSearchResults');
+  const q = (query || '').trim().toLowerCase();
+  if (q.length === 0) {
+    cont.innerHTML = '<div class="search-empty">Empieza a escribir para buscar...</div>';
+    SEARCH_RESULTS = [];
+    return;
+  }
+  if (q.length < 2) {
+    cont.innerHTML = '<div class="search-empty">Escribe al menos 2 caracteres...</div>';
+    SEARCH_RESULTS = [];
+    return;
+  }
+
+  const results = [];
+
+  // Buscar en movimientos
+  for (const m of ALL_DATA.movimientos) {
+    const nombre = props(m.properties, 'Nombre', '');
+    const nota = props(m.properties, 'Nota', '');
+    const categoria = props(m.properties, 'Categoria', '');
+    const cuenta = props(m.properties, 'Cuenta', '');
+    const monto = props(m.properties, 'Monto', 0);
+    const fecha = props(m.properties, 'Fecha', '');
+    const moneda = props(m.properties, 'Moneda', 'GTQ');
+    const signo = props(m.properties, 'Signo', 0);
+    const sym = moneda === 'USD' ? '$' : 'Q';
+    const allText = (nombre + ' ' + nota + ' ' + categoria + ' ' + cuenta).toLowerCase();
+    if (allText.includes(q)) {
+      results.push({
+        type: 'movimiento',
+        icon: signo > 0 ? '↑' : '↓',
+        title: nombre,
+        meta: fecha + (cuenta ? ' · ' + cuenta : '') + (categoria ? ' · ' + categoria : ''),
+        amount: (signo > 0 ? '+' : '-') + sym + Math.abs(monto).toFixed(2),
+        amountClass: signo > 0 ? 'income' : 'expense',
+        id: m.id,
+      });
+    }
+  }
+
+  // Buscar en visacuotas
+  for (const v of ALL_DATA.visacuotas) {
+    const nombre = props(v.properties, 'Nombre', '');
+    const establecimiento = props(v.properties, 'Establecimiento', '');
+    const tarjeta = props(v.properties, 'Tarjeta', '');
+    const allText = (nombre + ' ' + establecimiento + ' ' + tarjeta).toLowerCase();
+    if (allText.includes(q)) {
+      const pag = props(v.properties, 'Cuotas pagadas', 0);
+      const total = props(v.properties, 'Cuotas totales', 0);
+      results.push({
+        type: 'visacuota',
+        icon: '🛍️',
+        title: nombre,
+        meta: (establecimiento || tarjeta || '') + ' · ' + pag + '/' + total + ' cuotas',
+        amount: props(v.properties, 'Saldo pendiente', 0).toFixed(2),
+        amountClass: 'expense',
+        id: v.id,
+      });
+    }
+  }
+
+  // Buscar en préstamos
+  for (const p of ALL_DATA.prestamos) {
+    const nombre = props(p.properties, 'Prestamo', '');
+    const allText = nombre.toLowerCase();
+    if (allText.includes(q)) {
+      const pag = props(p.properties, 'Cuotas pagadas', 0);
+      const total = props(p.properties, 'Cuotas totales', 0);
+      results.push({
+        type: 'prestamo',
+        icon: '🏦',
+        title: nombre,
+        meta: 'Préstamo · ' + pag + '/' + total + ' cuotas',
+        amount: props(p.properties, 'Cuota mensual', 0).toFixed(2),
+        amountClass: 'expense',
+        id: p.id,
+      });
+    }
+  }
+
+  // Buscar en metas
+  for (const meta of ALL_DATA.metas) {
+    const nombre = props(meta.properties, 'Nombre', '');
+    if (nombre.toLowerCase().includes(q)) {
+      const actual = props(meta.properties, 'Monto actual', 0);
+      const objetivo = props(meta.properties, 'Monto objetivo', 0);
+      results.push({
+        type: 'meta',
+        icon: '🎯',
+        title: nombre,
+        meta: 'Meta · ' + actual.toFixed(0) + ' / ' + objetivo.toFixed(0),
+        amount: objetivo > 0 ? Math.round((actual / objetivo) * 100) + '%' : '0%',
+        amountClass: 'income',
+        id: meta.id,
+      });
+    }
+  }
+
+  // Buscar en presupuestos
+  for (const pre of ALL_DATA.presupuestos) {
+    const nombre = props(pre.properties, 'Nombre', '');
+    if (nombre.toLowerCase().includes(q)) {
+      results.push({
+        type: 'presupuesto',
+        icon: '📊',
+        title: nombre,
+        meta: 'Presupuesto',
+        amount: '',
+        amountClass: '',
+        id: pre.id,
+      });
+    }
+  }
+
+  // Buscar en cuentas/tarjetas
+  const seenAccounts = new Set();
+  for (const m of ALL_DATA.movimientos) {
+    const cuenta = props(m.properties, 'Cuenta', '');
+    if (cuenta && cuenta.toLowerCase().includes(q) && !seenAccounts.has(cuenta)) {
+      seenAccounts.add(cuenta);
+      results.push({
+        type: 'cuenta',
+        icon: '🏦',
+        title: cuenta,
+        meta: 'Cuenta · ir a detalle',
+        amount: '',
+        amountClass: '',
+        id: cuenta,
+      });
+    }
+  }
+  for (const t of (ALL_DATA.tarjetas || [])) {
+    if (t.name.toLowerCase().includes(q) || (t.banco && t.banco.toLowerCase().includes(q))) {
+      results.push({
+        type: 'tarjeta',
+        icon: '💳',
+        title: t.name,
+        meta: 'Tarjeta · ' + (t.banco || ''),
+        amount: '',
+        amountClass: '',
+        id: t.id,
+      });
+    }
+  }
+
+  SEARCH_RESULTS = results.slice(0, 50);
+  SEARCH_ACTIVE_IDX = 0;
+
+  if (SEARCH_RESULTS.length === 0) {
+    cont.innerHTML = '<div class="search-no-results"><div class="search-no-results-icon">🔍</div>Sin resultados para "' + escapeHtml(query) + '"</div>';
+    return;
+  }
+
+  // Agrupar por tipo
+  const groups = {};
+  for (const r of SEARCH_RESULTS) {
+    if (!groups[r.type]) groups[r.type] = [];
+    groups[r.type].push(r);
+  }
+  const groupLabels = {
+    movimiento: 'Movimientos',
+    visacuota: 'Visacuotas',
+    prestamo: 'Préstamos',
+    meta: 'Metas',
+    presupuesto: 'Presupuestos',
+    cuenta: 'Cuentas',
+    tarjeta: 'Tarjetas',
+  };
+  let html = '';
+  let idx = 0;
+  for (const type of ['movimiento', 'visacuota', 'prestamo', 'meta', 'presupuesto', 'cuenta', 'tarjeta']) {
+    if (!groups[type]) continue;
+    html += '<div class="search-section-title">' + groupLabels[type] + '</div>';
+    for (const r of groups[type]) {
+      const amtHtml = r.amount ? '<div class="search-result-amount ' + r.amountClass + '">' + (r.amount.startsWith('+') || r.amount.startsWith('-') ? r.amount : (r.amountClass === 'income' ? '+' : '') + r.amount) + '</div>' : '';
+      html += '<div class="search-result" data-idx="' + idx + '" data-type="' + r.type + '" data-id="' + escapeHtml(r.id) + '">' +
+        '<div class="search-result-icon">' + r.icon + '</div>' +
+        '<div class="search-result-info"><div class="search-result-title">' + highlightMatch(r.title, query) + '</div>' +
+        '<div class="search-result-meta">' + escapeHtml(r.meta) + '</div></div>' +
+        amtHtml +
+        '</div>';
+      idx++;
+    }
+  }
+  cont.innerHTML = html;
+  updateActiveResult();
+}
+
+function updateActiveResult() {
+  document.querySelectorAll('.search-result').forEach(function(el) {
+    el.classList.toggle('active', Number(el.dataset.idx) === SEARCH_ACTIVE_IDX);
+  });
+  const active = document.querySelector('.search-result.active');
+  if (active) active.scrollIntoView({ block: 'nearest' });
+}
+
+function selectSearchResult(idx) {
+  const r = SEARCH_RESULTS[idx];
+  if (!r) return;
+  closeModal('searchModal');
+  if (r.type === 'movimiento') {
+    // Mostrar detalle del movimiento en modal
+    const m = ALL_DATA.movimientos.find(x => x.id === r.id);
+    if (m) {
+      const p = m.properties;
+      const nombre = props(p, 'Nombre', '?');
+      const tipo = props(p, 'Tipo', '?');
+      const categoria = props(p, 'Categoria', '—');
+      const cuenta = props(p, 'Cuenta', '—');
+      const monto = props(p, 'Monto', 0);
+      const fecha = props(p, 'Fecha', '—');
+      const nota = props(p, 'Nota', '');
+      const moneda = props(p, 'Moneda', 'GTQ');
+      const sym = moneda === 'USD' ? '$' : 'Q';
+      const signo = props(p, 'Signo', 0);
+      document.getElementById('detailModalTitle').innerText = nombre;
+      document.getElementById('detailModalBody').innerHTML =
+        '<div class="detail-grid">' +
+          '<div class="detail-row"><span>Tipo</span><strong>' + escapeHtml(tipo) + '</strong></div>' +
+          '<div class="detail-row"><span>Monto</span><strong class="' + (signo > 0 ? 'income' : 'expense') + '">' + (signo > 0 ? '+' : '-') + sym + Math.abs(monto).toFixed(2) + '</strong></div>' +
+          '<div class="detail-row"><span>Fecha</span><strong>' + escapeHtml(fecha) + '</strong></div>' +
+          '<div class="detail-row"><span>Categoría</span><strong>' + escapeHtml(categoria) + '</strong></div>' +
+          '<div class="detail-row"><span>Cuenta</span><strong>' + escapeHtml(cuenta) + '</strong></div>' +
+          (nota ? '<div class="detail-row"><span>Nota</span><strong>' + escapeHtml(nota) + '</strong></div>' : '') +
+        '</div>';
+      openModal('detailModal');
+    }
+  } else if (r.type === 'visacuota') {
+    goToPage('visacuotas');
+    setTimeout(function() {
+      const el = document.querySelector('[data-action="view-visacuota"][data-id="' + r.id + '"]');
+      if (el) el.click();
+    }, 200);
+  } else if (r.type === 'prestamo') {
+    goToPage('prestamos');
+    setTimeout(function() {
+      const el = document.querySelector('[data-action="view-prestamo"][data-id="' + r.id + '"]');
+      if (el) el.click();
+    }, 200);
+  } else if (r.type === 'meta') {
+    goToPage('metas');
+  } else if (r.type === 'presupuesto') {
+    goToPage('presupuestos');
+  } else if (r.type === 'cuenta') {
+    openCuentaDetalle({ name: r.id, balance: 0, icon: getAccountIcon(r.id) });
+  } else if (r.type === 'tarjeta') {
+    document.getElementById('tcVisacuotasTitle').innerText = 'Visacuotas: ' + r.title;
+    const vis = ALL_DATA.visacuotas.filter(v => props(v.properties, 'Tarjeta', '') === r.title);
+    const cont = document.getElementById('tcVisacuotasList');
+    if (vis.length === 0) cont.innerHTML = '<div class="empty">Sin visacuotas en esta tarjeta</div>';
+    else cont.innerHTML = vis.map(v => {
+      const nombre = props(v.properties, 'Nombre', '?');
+      const pag = props(v.properties, 'Cuotas pagadas', 0);
+      const total = props(v.properties, 'Cuotas totales', 0);
+      const saldo = props(v.properties, 'Saldo pendiente', 0);
+      return '<div class="list-item"><div class="list-icon">🛍️</div><div class="list-info"><div class="list-title">' + escapeHtml(nombre) + '</div><div class="list-meta">Cuota ' + pag + '/' + total + '</div></div><div class="list-amount expense">' + fmt(saldo) + '</div></div>';
+    }).join('');
+    openModal('tcVisacuotasModal');
+  }
+}
+
+document.addEventListener('input', function(e) {
+  if (e.target.id === 'globalSearchInput') {
+    runSearch(e.target.value);
+  }
+});
+
+document.addEventListener('keydown', function(e) {
+  if (!document.getElementById('searchModal').classList.contains('show')) return;
+  if (e.target.id !== 'globalSearchInput') return;
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    SEARCH_ACTIVE_IDX = Math.min(SEARCH_ACTIVE_IDX + 1, SEARCH_RESULTS.length - 1);
+    updateActiveResult();
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    SEARCH_ACTIVE_IDX = Math.max(SEARCH_ACTIVE_IDX - 1, 0);
+    updateActiveResult();
+  } else if (e.key === 'Enter') {
+    e.preventDefault();
+    selectSearchResult(SEARCH_ACTIVE_IDX);
+  }
+});
+
+document.addEventListener('click', function(e) {
+  const result = e.target.closest('.search-result');
+  if (result) {
+    selectSearchResult(Number(result.dataset.idx));
+  }
+});
+
+/* ---------- DETECCIÓN DE SUSCRIPCIONES (#28) ---------- */
+function normalizarNombreSuscripcion(nombre) {
+  // Quitar números, fechas, palabras comunes
+  return nombre
+    .toLowerCase()
+    .replace(/\d+/g, '')
+    .replace(/\b(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\b/gi, '')
+    .replace(/\b(de|del|la|el|los|las)\b/g, '')
+    .replace(/[^a-záéíóúñ\s]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function detectarSuscripciones() {
+  const suscripciones = {};
+  for (const m of ALL_DATA.movimientos) {
+    const p = m.properties;
+    const tipo = props(p, 'Tipo', '').toLowerCase();
+    const signo = props(p, 'Signo', 0);
+    // Solo gastos
+    if (signo >= 0) continue;
+    if (tipo.includes('ingreso')) continue;
+    const nombreOriginal = props(p, 'Nombre', '');
+    if (!nombreOriginal) continue;
+    const nombreNorm = normalizarNombreSuscripcion(nombreOriginal);
+    if (nombreNorm.length < 3) continue;
+    const monto = Math.abs(props(p, 'Monto', 0));
+    const fecha = props(p, 'Fecha', '');
+    if (!fecha || monto === 0) continue;
+    if (!suscripciones[nombreNorm]) {
+      suscripciones[nombreNorm] = {
+        nombreOriginal: nombreOriginal,
+        nombreNorm: nombreNorm,
+        pagos: [],
+      };
+    }
+    suscripciones[nombreNorm].pagos.push({
+      id: m.id,
+      monto: monto,
+      fecha: fecha,
+      fechaDate: new Date(fecha),
+    });
+  }
+
+  // Filtrar las que tienen >= 2 pagos en distintos meses (criterio de suscripción)
+  const detected = [];
+  for (const s of Object.values(suscripciones)) {
+    if (s.pagos.length < 2) continue;
+    // Ordenar por fecha
+    s.pagos.sort((a, b) => a.fechaDate - b.fechaDate);
+    // Verificar que están en al menos 2 meses distintos
+    const meses = new Set(s.pagos.map(p => p.fechaDate.getFullYear() + '-' + p.fechaDate.getMonth()));
+    if (meses.size < 2) continue;
+    // Calcular monto típico (mediana)
+    const montos = s.pagos.map(p => p.monto).sort((a, b) => a - b);
+    const mediana = montos[Math.floor(montos.length / 2)];
+    const ultimoPago = s.pagos[s.pagos.length - 1];
+    const primerPago = s.pagos[0];
+    // Detectar aumento: último pago > 10% más que la mediana
+    const aumento = ultimoPago.monto > mediana * 1.1;
+    detected.push({
+      nombre: s.nombreOriginal,
+      pagos: s.pagos,
+      mediana: mediana,
+      ultimoMonto: ultimoPago.monto,
+      primerMonto: primerPago.monto,
+      aumento: aumento,
+      deltaPct: mediana > 0 ? ((ultimoPago.monto - mediana) / mediana) * 100 : 0,
+    });
+  }
+
+  // Ordenar: primero los que tienen aumento, luego por último pago más reciente
+  detected.sort((a, b) => {
+    if (a.aumento !== b.aumento) return b.aumento - a.aumento;
+    return b.pagos[b.pagos.length - 1].fechaDate - a.pagos[a.pagos.length - 1].fechaDate;
+  });
+  return detected;
+}
+
+function renderSuscripciones() {
+  const section = document.getElementById('suscripcionesSection');
+  const cont = document.getElementById('dashboardSuscripciones');
+  if (!section || !cont) return;
+  const subs = detectarSuscripciones();
+  if (subs.length === 0) {
+    section.style.display = 'none';
+    return;
+  }
+  section.style.display = '';
+  cont.innerHTML = subs.map(s => {
+    const icon = s.aumento ? '⚠️' : '🔁';
+    const deltaHtml = s.aumento
+      ? '<span class="suscripcion-delta">+' + s.deltaPct.toFixed(0) + '%</span>'
+      : '';
+    return '<div class="suscripcion-item">' +
+      '<div class="suscripcion-icon">' + icon + '</div>' +
+      '<div class="suscripcion-info"><div class="suscripcion-name">' + escapeHtml(s.nombre) + '</div>' +
+      '<div class="suscripcion-meta">' + s.pagos.length + ' pagos detectados' +
+      (s.aumento ? ' · antes ' + fmt(s.mediana) : '') + '</div></div>' +
+      '<div><span class="suscripcion-amount' + (s.aumento ? ' warning' : '') + '">' + fmt(s.ultimoMonto) + '</span>' +
+      deltaHtml + '</div></div>';
+  }).join('');
+}
+
+/* ---------- WIDGET PROYECCIÓN SALDO (#4) ---------- */
+function renderProyeccion() {
+  const cont = document.getElementById('dashboardProyeccion');
+  if (!cont) return;
+
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth();
+  const today = now.getDate();
+  const lastDay = new Date(year, month + 1, 0).getDate();
+  const daysRemaining = lastDay - today;
+
+  // Saldo actual de todas las cuentas (excluyendo TCs)
+  const tcNombres = new Set((ALL_DATA.tarjetas || []).map(t => t.name));
+  const porCuenta = {};
+  for (const m of ALL_DATA.movimientos) {
+    const cuenta = props(m.properties, 'Cuenta', '');
+    const fecha = props(m.properties, 'Fecha', '');
+    if (!cuenta || !fecha) continue;
+    if (tcNombres.has(cuenta)) continue; // excluir TCs (deuda no es "saldo")
+    const mDate = new Date(fecha);
+    if (mDate.getFullYear() !== year || mDate.getMonth() !== month) continue;
+    const signo = props(m.properties, 'Signo', 0);
+    porCuenta[cuenta] = (porCuenta[cuenta] || 0) + signo;
+  }
+  const saldoActual = Object.values(porCuenta).reduce((a, b) => a + b, 0);
+
+  // Promedio diario de gastos en lo que va del mes
+  const gastosDelMes = ALL_DATA.movimientos.filter(m => {
+    const fecha = props(m.properties, 'Fecha', '');
+    if (!fecha) return false;
+    const d = new Date(fecha);
+    return d.getFullYear() === year && d.getMonth() === month;
+  }).reduce((sum, m) => {
+    const tipo = props(m.properties, 'Tipo', '').toLowerCase();
+    const signo = props(m.properties, 'Signo', 0);
+    if (tipo.includes('gasto') || signo < 0) return sum + Math.abs(signo);
+    return sum;
+  }, 0);
+
+  const promedioDiarioGasto = today > 0 ? gastosDelMes / today : 0;
+
+  // Ingresos restantes esperados este mes (basado en lo ganado hasta hoy × factor de días)
+  const ingresosDelMes = ALL_DATA.movimientos.filter(m => {
+    const fecha = props(m.properties, 'Fecha', '');
+    if (!fecha) return false;
+    const d = new Date(fecha);
+    return d.getFullYear() === year && d.getMonth() === month;
+  }).reduce((sum, m) => {
+    const tipo = props(m.properties, 'Tipo', '').toLowerCase();
+    const signo = props(m.properties, 'Signo', 0);
+    if (tipo.includes('ingreso') || signo > 0) return sum + signo;
+    return sum;
+  }, 0);
+  const promedioDiarioIngreso = today > 0 ? ingresosDelMes / today : 0;
+  const ingresosRestantesEsperados = promedioDiarioIngreso * daysRemaining;
+
+  // Cuotas pendientes que se pagarán este mes (prestamos + tarjetas con fecha de pago este mes)
+  const pagos = getUpcomingPayments();
+  const cuotasPendientesMes = pagos.filter(p => p.daysUntil >= 0 && p.date.getMonth() === month)
+    .reduce((sum, p) => sum + p.monto, 0);
+
+  // Proyección: saldo actual + ingresos esperados - gastos esperados - cuotas pendientes
+  const gastosRestantesEsperados = promedioDiarioGasto * daysRemaining;
+  const proyectado = saldoActual + ingresosRestantesEsperados - gastosRestantesEsperados - cuotasPendientesMes;
+
+  const isPositive = proyectado >= 0;
+  const isWarning = proyectado < 0 && proyectado > -saldoActual * 0.3;
+  const amountClass = isPositive ? 'positive' : (isWarning ? 'warning' : 'negative');
+  const barClass = isPositive ? '' : (isWarning ? 'warning' : 'danger');
+  const barPct = Math.max(0, Math.min(100, saldoActual > 0 ? (proyectado / saldoActual) * 100 : 0));
+
+  cont.innerHTML =
+    '<div class="proyeccion-main">' +
+      '<div><div class="proyeccion-label">Saldo proyectado al ' + lastDay + ' ' + MESES[month] + '</div>' +
+      '<div class="proyeccion-amount ' + amountClass + '">' + fmt(proyectado) + '</div></div>' +
+      '<div style="text-align: right;"><div class="proyeccion-label">vs actual</div>' +
+      '<div class="proyeccion-amount" style="font-size:16px; color: var(--text-2);">' + fmt(saldoActual) + '</div></div>' +
+    '</div>' +
+    '<div class="proyeccion-bar"><div class="proyeccion-bar-fill ' + barClass + '" style="width: ' + barPct + '%"></div></div>' +
+    '<div class="proyeccion-breakdown">' +
+      '<div class="proyeccion-stat"><div class="proyeccion-stat-value">' + fmt(promedioDiarioGasto) + '</div><div class="proyeccion-stat-label">Gasto/día</div></div>' +
+      '<div class="proyeccion-stat"><div class="proyeccion-stat-value">' + fmt(cuotasPendientesMes) + '</div><div class="proyeccion-stat-label">Cuotas pendientes</div></div>' +
+      '<div class="proyeccion-stat"><div class="proyeccion-stat-value">' + daysRemaining + '</div><div class="proyeccion-stat-label">Días restantes</div></div>' +
+    '</div>';
+}
+
 document.getElementById('calPrevMonth').addEventListener('click', function() {
   CAL_MONTH--;
   if (CAL_MONTH < 0) { CAL_MONTH = 11; CAL_YEAR--; }
@@ -3746,6 +4569,413 @@ document.addEventListener('click', async function(e) {
     } catch (e) { showToast('Error: ' + e.message, 'error'); }
   }
 });
+
+/* ---------- REPORTE PDF MENSUAL (#25) ---------- */
+async function generateMonthlyPDF() {
+  if (typeof jspdf === 'undefined' && typeof window.jspdf === 'undefined') {
+    showToast('Cargando librería PDF...', 'info');
+    await new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = 'https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js';
+      s.onload = resolve;
+      s.onerror = reject;
+      document.head.appendChild(s);
+    });
+  }
+  const jsPDF = (window.jspdf && window.jspdf.jsPDF) || window.jsPDF;
+  if (!jsPDF) { showToast('No se pudo cargar la librería PDF', 'error'); return; }
+  showToast('Generando PDF...', 'info');
+
+  const doc = new jsPDF();
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth();
+  const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+
+  // Cabecera
+  doc.setFontSize(22);
+  doc.setTextColor(40, 40, 40);
+  doc.text('MiFinanza', 20, 25);
+  doc.setFontSize(14);
+  doc.setTextColor(100, 100, 100);
+  doc.text('Reporte Mensual - ' + MESES[month] + ' ' + year, 20, 35);
+
+  doc.setDrawColor(200, 200, 200);
+  doc.line(20, 40, 190, 40);
+
+  // Filtrar movimientos del mes
+  const movsMes = ALL_DATA.movimientos.filter(m => {
+    const fecha = props(m.properties, 'Fecha', '');
+    if (!fecha) return false;
+    const d = new Date(fecha);
+    return d.getFullYear() === year && d.getMonth() === month;
+  });
+
+  const ingresos = movsMes.filter(m => props(m.properties, 'Signo', 0) > 0)
+    .reduce((s, m) => s + props(m.properties, 'Monto', 0), 0);
+  const gastos = movsMes.filter(m => props(m.properties, 'Signo', 0) < 0)
+    .reduce((s, m) => s + Math.abs(props(m.properties, 'Monto', 0)), 0);
+  const balance = ingresos - gastos;
+
+  // Resumen
+  let y = 55;
+  doc.setFontSize(13);
+  doc.setTextColor(40, 40, 40);
+  doc.text('Resumen', 20, y);
+  y += 10;
+  doc.setFontSize(11);
+  doc.setTextColor(60, 60, 60);
+  doc.text('Ingresos:', 25, y);
+  doc.setTextColor(20, 150, 80);
+  doc.text('Q' + ingresos.toFixed(2), 100, y);
+  y += 7;
+  doc.setTextColor(60, 60, 60);
+  doc.text('Gastos:', 25, y);
+  doc.setTextColor(220, 80, 80);
+  doc.text('Q' + gastos.toFixed(2), 100, y);
+  y += 7;
+  doc.setTextColor(60, 60, 60);
+  doc.text('Balance:', 25, y);
+  doc.setTextColor(balance >= 0 ? 20 : 220, balance >= 0 ? 150 : 80, balance >= 0 ? 80 : 80);
+  doc.text('Q' + balance.toFixed(2), 100, y);
+  y += 7;
+  doc.setTextColor(100, 100, 100);
+  doc.text('Movimientos: ' + movsMes.length, 25, y);
+
+  // Top categorías
+  y += 12;
+  doc.setFontSize(13);
+  doc.setTextColor(40, 40, 40);
+  doc.text('Gastos por categoría', 20, y);
+  y += 8;
+  const porCat = {};
+  for (const m of movsMes) {
+    if (props(m.properties, 'Signo', 0) >= 0) continue;
+    const cat = props(m.properties, 'Categoria', 'Sin categoría');
+    porCat[cat] = (porCat[cat] || 0) + Math.abs(props(m.properties, 'Monto', 0));
+  }
+  const topCats = Object.entries(porCat).sort((a, b) => b[1] - a[1]).slice(0, 10);
+  doc.setFontSize(10);
+  doc.setTextColor(60, 60, 60);
+  for (const [cat, monto] of topCats) {
+    if (y > 270) { doc.addPage(); y = 20; }
+    doc.text(cat, 25, y);
+    doc.text('Q' + monto.toFixed(2), 100, y);
+    doc.text(((monto / gastos) * 100).toFixed(1) + '%', 160, y);
+    y += 6;
+  }
+
+  // Top gastos individuales
+  y += 8;
+  if (y > 250) { doc.addPage(); y = 20; }
+  doc.setFontSize(13);
+  doc.setTextColor(40, 40, 40);
+  doc.text('Top 15 gastos', 20, y);
+  y += 8;
+  const topGastos = movsMes
+    .filter(m => props(m.properties, 'Signo', 0) < 0)
+    .sort((a, b) => Math.abs(props(b.properties, 'Monto', 0)) - Math.abs(props(a.properties, 'Monto', 0)))
+    .slice(0, 15);
+  doc.setFontSize(9);
+  for (const m of topGastos) {
+    if (y > 275) { doc.addPage(); y = 20; }
+    const nombre = props(m.properties, 'Nombre', '?').substring(0, 35);
+    const fecha = props(m.properties, 'Fecha', '?');
+    const monto = Math.abs(props(m.properties, 'Monto', 0));
+    doc.setTextColor(60, 60, 60);
+    doc.text(fecha, 25, y);
+    doc.text(nombre, 50, y);
+    doc.setTextColor(220, 80, 80);
+    doc.text('Q' + monto.toFixed(2), 160, y);
+    y += 5;
+  }
+
+  // Suscripciones detectadas
+  const subs = detectarSuscripciones();
+  if (subs.length > 0) {
+    y += 10;
+    if (y > 250) { doc.addPage(); y = 20; }
+    doc.setFontSize(13);
+    doc.setTextColor(40, 40, 40);
+    doc.text('Suscripciones recurrentes', 20, y);
+    y += 8;
+    doc.setFontSize(10);
+    for (const s of subs) {
+      if (y > 275) { doc.addPage(); y = 20; }
+      doc.setTextColor(60, 60, 60);
+      doc.text(s.nombre.substring(0, 30), 25, y);
+      if (s.aumento) {
+        doc.setTextColor(220, 80, 80);
+        doc.text('Q' + s.ultimoMonto.toFixed(2) + ' (+' + s.deltaPct.toFixed(0) + '%)', 130, y);
+      } else {
+        doc.setTextColor(100, 100, 100);
+        doc.text('Q' + s.ultimoMonto.toFixed(2), 130, y);
+      }
+      y += 6;
+    }
+  }
+
+  // Cuotas pendientes
+  const pagos = getUpcomingPayments();
+  if (pagos.length > 0) {
+    y += 10;
+    if (y > 250) { doc.addPage(); y = 20; }
+    doc.setFontSize(13);
+    doc.setTextColor(40, 40, 40);
+    doc.text('Próximos pagos', 20, y);
+    y += 8;
+    doc.setFontSize(10);
+    for (const p of pagos.slice(0, 10)) {
+      if (y > 275) { doc.addPage(); y = 20; }
+      doc.setTextColor(60, 60, 60);
+      const fechaStr = p.date.toLocaleDateString('es-GT', { day: 'numeric', month: 'short' });
+      doc.text(fechaStr, 25, y);
+      doc.text(p.name.substring(0, 35), 50, y);
+      doc.setTextColor(220, 80, 80);
+      doc.text('Q' + p.monto.toFixed(2), 160, y);
+      y += 6;
+    }
+  }
+
+  // Footer
+  const pageCount = doc.internal.getNumberOfPages();
+  for (let i = 1; i <= pageCount; i++) {
+    doc.setPage(i);
+    doc.setFontSize(8);
+    doc.setTextColor(150, 150, 150);
+    doc.text('MiFinanza · Generado el ' + now.toLocaleDateString('es-GT') + ' · Página ' + i + '/' + pageCount, 20, 290);
+  }
+
+  const fileName = 'MiFinanza-' + MESES[month] + '-' + year + '.pdf';
+  doc.save(fileName);
+  showToast('✓ PDF descargado: ' + fileName, 'success');
+}
+
+document.addEventListener('click', function(e) {
+  if (e.target.closest('[data-action="generate-pdf"]')) {
+    generateMonthlyPDF().catch(err => showToast('Error PDF: ' + err.message, 'error'));
+  }
+});
+
+/* ---------- BIOMETRÍA + PIN (#42) ---------- */
+const PIN_STORAGE_KEY = 'mifinanza_pin_hash';
+const BIO_STORAGE_KEY = 'mifinanza_bio_credential';
+let CURRENT_PIN = '';
+let SET_PIN = '';
+let SET_PIN_CONFIRM = '';
+let SET_PIN_STEP = 0; // 0 = configurar, 1 = confirmar
+
+async function hashPin(pin) {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(pin + ':mifinanza_salt_v1');
+  const hash = await crypto.subtle.digest('SHA-256', data);
+  return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function checkPinSetup() {
+  const hasPin = localStorage.getItem(PIN_STORAGE_KEY);
+  const hasBio = localStorage.getItem(BIO_STORAGE_KEY);
+  const remember = localStorage.getItem('mifinanza_remember') === 'true';
+  // Si la sesión está recordada, no pedir auth
+  if (remember && sessionStorage.getItem('mifinanza_session_token')) {
+    showApp();
+    return true;
+  }
+  if (hasPin || hasBio) {
+    document.getElementById('biometricQuickAccess').style.display = 'flex';
+  }
+  return false;
+}
+
+function buildPinPad(containerId, onDigit, onDelete) {
+  const pad = document.getElementById(containerId);
+  pad.innerHTML = '';
+  const keys = [
+    '1', '2', '3',
+    '4', '5', '6',
+    '7', '8', '9',
+    'biometric', '0', 'delete',
+  ];
+  for (const k of keys) {
+    const btn = document.createElement('button');
+    btn.className = 'pin-key';
+    if (k === 'biometric') {
+      btn.classList.add('action');
+      if (window.PublicKeyCredential) {
+        btn.textContent = '👆';
+        btn.title = 'Usar biometría';
+        btn.onclick = tryBiometric;
+      } else {
+        btn.classList.add('empty');
+      }
+    } else if (k === 'delete') {
+      btn.classList.add('action');
+      btn.textContent = '⌫';
+      btn.onclick = onDelete;
+    } else {
+      btn.textContent = k;
+      btn.onclick = () => onDigit(k);
+    }
+    pad.appendChild(btn);
+  }
+}
+
+function updatePinDots(dotsId, length) {
+  const dots = document.querySelectorAll('#' + dotsId + ' .pin-dot');
+  dots.forEach((d, i) => d.classList.toggle('filled', i < length));
+}
+
+function showAuthMode(mode) {
+  document.getElementById('authPasswordMode').style.display = mode === 'password' ? '' : 'none';
+  document.getElementById('authPinMode').style.display = mode === 'pin' ? '' : 'none';
+  document.getElementById('authSetPinMode').style.display = mode === 'setpin' ? '' : 'none';
+}
+
+function showApp() {
+  document.getElementById('authOverlay').classList.remove('show');
+  document.getElementById('app').hidden = false;
+  sessionStorage.setItem('mifinanza_session_token', '1');
+  if (typeof init === 'function') init();
+  // Si no tiene PIN, ofrecer configurarlo
+  if (!localStorage.getItem(PIN_STORAGE_KEY) && !localStorage.getItem('mifinanza_pin_skipped')) {
+    setTimeout(() => {
+      if (confirm('¿Quieres configurar un PIN de 4 dígitos para acceso rápido?')) {
+        showAuthMode('setpin');
+        SET_PIN = '';
+        SET_PIN_CONFIRM = '';
+        SET_PIN_STEP = 0;
+        updatePinDots('setPinDots', 0);
+        document.getElementById('setPinStatus').innerText = 'Ingresa un PIN';
+        buildPinPad('setPinPad', handleSetPinDigit, handleSetPinDelete);
+      } else {
+        localStorage.setItem('mifinanza_pin_skipped', 'true');
+      }
+    }, 1500);
+  }
+}
+
+function handlePinLoginDigit(d) {
+  if (CURRENT_PIN.length >= 4) return;
+  CURRENT_PIN += d;
+  updatePinDots('pinDots', CURRENT_PIN.length);
+  if (CURRENT_PIN.length === 4) {
+    setTimeout(verifyPin, 200);
+  }
+}
+
+function handlePinDelete() {
+  CURRENT_PIN = CURRENT_PIN.slice(0, -1);
+  updatePinDots('pinDots', CURRENT_PIN.length);
+  document.getElementById('authPinError').innerText = '';
+}
+
+async function verifyPin() {
+  const stored = localStorage.getItem(PIN_STORAGE_KEY);
+  if (!stored) { showAuthMode('password'); return; }
+  const hash = await hashPin(CURRENT_PIN);
+  if (hash === stored) {
+    showApp();
+  } else {
+    document.getElementById('authPinError').innerText = 'PIN incorrecto';
+    CURRENT_PIN = '';
+    updatePinDots('pinDots', 0);
+  }
+}
+
+function handleSetPinDigit(d) {
+  if (SET_PIN_STEP === 0) {
+    if (SET_PIN.length >= 4) return;
+    SET_PIN += d;
+    updatePinDots('setPinDots', SET_PIN.length);
+    document.getElementById('setPinStatus').innerText = 'Ingresa un PIN';
+    if (SET_PIN.length === 4) {
+      SET_PIN_STEP = 1;
+      document.getElementById('setPinStatus').innerText = 'Confirma el PIN';
+    }
+  } else {
+    if (SET_PIN_CONFIRM.length >= 4) return;
+    SET_PIN_CONFIRM += d;
+    updatePinDots('setPinDots', SET_PIN_CONFIRM.length);
+    if (SET_PIN_CONFIRM.length === 4) {
+      setTimeout(saveSetPin, 200);
+    }
+  }
+}
+
+function handleSetPinDelete() {
+  if (SET_PIN_STEP === 0) {
+    SET_PIN = SET_PIN.slice(0, -1);
+    updatePinDots('setPinDots', SET_PIN.length);
+    document.getElementById('setPinStatus').innerText = 'Ingresa un PIN';
+  } else {
+    SET_PIN_CONFIRM = SET_PIN_CONFIRM.slice(0, -1);
+    updatePinDots('setPinDots', SET_PIN_CONFIRM.length);
+  }
+}
+
+async function saveSetPin() {
+  if (SET_PIN !== SET_PIN_CONFIRM) {
+    document.getElementById('setPinStatus').innerText = '✗ No coinciden, intenta de nuevo';
+    document.getElementById('setPinStatus').style.color = 'var(--coral)';
+    SET_PIN = '';
+    SET_PIN_CONFIRM = '';
+    SET_PIN_STEP = 0;
+    setTimeout(() => {
+      updatePinDots('setPinDots', 0);
+      document.getElementById('setPinStatus').innerText = 'Ingresa un PIN';
+      document.getElementById('setPinStatus').style.color = '';
+    }, 1500);
+    return;
+  }
+  const hash = await hashPin(SET_PIN);
+  localStorage.setItem(PIN_STORAGE_KEY, hash);
+  localStorage.removeItem('mifinanza_pin_skipped');
+  document.getElementById('setPinStatus').innerText = '✓ PIN guardado';
+  document.getElementById('setPinStatus').style.color = 'var(--jade-bright)';
+  setTimeout(() => {
+    document.getElementById('authOverlay').classList.add('hidden');
+    showAuthMode('password');
+  }, 1000);
+}
+
+async function tryBiometric() {
+  // WebAuthn solo si hay credential guardada
+  const credId = localStorage.getItem(BIO_STORAGE_KEY);
+  if (!credId || !window.PublicKeyCredential) {
+    showToast('Biometría no configurada', 'error');
+    return;
+  }
+  try {
+    const challenge = new Uint8Array(32);
+    crypto.getRandomValues(challenge);
+    const credential = await navigator.credentials.get({
+      publicKey: {
+        challenge,
+        allowCredentials: [{ id: Uint8Array.from(atob(credId), c => c.charCodeAt(0)), type: 'public-key' }],
+        userVerification: 'required',
+        timeout: 60000,
+      },
+    });
+    if (credential) showApp();
+  } catch (e) {
+    showToast('Biometría cancelada o no disponible', 'error');
+  }
+}
+
+document.addEventListener('DOMContentLoaded', async function() {
+  if (await checkPinSetup()) return;
+});
+
+document.getElementById('biometricBtn')?.addEventListener('click', tryBiometric);
+document.getElementById('pinBtn')?.addEventListener('click', function() {
+  showAuthMode('pin');
+  CURRENT_PIN = '';
+  updatePinDots('pinDots', 0);
+  document.getElementById('authPinError').innerText = '';
+  buildPinPad('pinPad', handlePinLoginDigit, handlePinDelete);
+});
+document.getElementById('pinBackBtn')?.addEventListener('click', function() { showAuthMode('password'); });
+document.getElementById('setPinBackBtn')?.addEventListener('click', function() { showAuthMode('password'); });
 
 /* ---------- INIT ---------- */
 async function init() {
