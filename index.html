@@ -2419,9 +2419,9 @@ function renderDashboardExtras() {
 }
 
 /* ---------- CALENDARIO DE PAGOS ---------- */
-let CAL_MONTH = new Date().getMonth();
-let CAL_YEAR = new Date().getFullYear();
-let CAL_SELECTED_DAY = null;
+var CAL_MONTH = new Date().getMonth();
+var CAL_YEAR = new Date().getFullYear();
+var CAL_SELECTED_DAY = null;
 
 function calcCuotaMensual(tasaMens, monto, n) {
   if (!tasaMens || tasaMens === 0) return monto / n;
@@ -2448,14 +2448,14 @@ function getUpcomingPayments(monthOffset = 0) {
     const cuota = props(pProps, 'Cuota mensual', 0);
     const inicio = props(pProps, 'Fecha inicio', null);
     // Si tiene fecha de inicio, calcular el día del mes del pago
-    let diaPago = 1;
+    var diaPago = 1;
     if (inicio) {
       const d = new Date(inicio);
       diaPago = d.getDate();
     }
     // Generar pagos desde fecha de inicio hasta completar
     const inicioDate = inicio ? new Date(inicio) : new Date(year, month, 1);
-    for (let m = 0; m < total; m++) {
+    for (var m = 0; m < total; m++) {
       const payDate = new Date(inicioDate.getFullYear(), inicioDate.getMonth() + m, inicioDate.getDate());
       if (payDate < new Date(pag === 0 ? inicioDate : new Date(year, month, diaPago))) continue;
       if (payDate.getMonth() === month && payDate.getFullYear() === year) {
@@ -2486,10 +2486,10 @@ function getUpcomingPayments(monthOffset = 0) {
     const fechaCompra = props(vProps, 'Fecha compra', null);
     if (!fechaCompra) return;
     const inicioDate = new Date(fechaCompra);
-    let diaPago = inicioDate.getDate();
+    var diaPago = inicioDate.getDate();
     // Ajustar día si el mes no tiene ese día
     if (diaPago > lastDay) diaPago = lastDay;
-    for (let m = 0; m < total; m++) {
+    for (var m = 0; m < total; m++) {
       const payDate = new Date(inicioDate.getFullYear(), inicioDate.getMonth() + m, inicioDate.getDate());
       if (payDate.getMonth() === month && payDate.getFullYear() === year) {
         const daysUntil = Math.ceil((payDate - now) / (1000 * 60 * 60 * 24));
@@ -2534,16 +2534,16 @@ function renderCalendario() {
   });
 
   const dias = ['D', 'L', 'M', 'M', 'J', 'V', 'S'];
-  let html = '<div class="cal-weekdays">';
+  var html = '<div class="cal-weekdays">';
   dias.forEach(d => html += `<div class="cal-wd">${d}</div>`);
   html += '</div><div class="cal-days">';
 
   // Días vacíos antes del primer día
-  for (let i = 0; i < startWeekday; i++) {
+  for (var i = 0; i < startWeekday; i++) {
     html += '<div class="cal-day empty"></div>';
   }
 
-  for (let d = 1; d <= totalDays; d++) {
+  for (var d = 1; d <= totalDays; d++) {
     const date = new Date(CAL_YEAR, CAL_MONTH, d);
     const isToday = date.toDateString() === today.toDateString();
     const isPast = date < today && !isToday;
@@ -2553,7 +2553,7 @@ function renderCalendario() {
     const hasUpcoming = dayPagos.some(p => !p.isPast && p.daysUntil <= 7);
     const totalMonto = dayPagos.reduce((s, p) => s + (p.monto || 0), 0);
     const selected = CAL_SELECTED_DAY === d;
-    let cls = 'cal-day';
+    var cls = 'cal-day';
     if (isToday) cls += ' today';
     if (isPast) cls += ' past';
     if (hasOverdue) cls += ' overdue';
@@ -2646,8 +2646,8 @@ function renderProximasCuotas() {
 }
 
 /* ---------- DETALLE DE CUENTA ---------- */
-let CURRENT_CUENTA = null;
-let CURRENT_CUENTA_FILTER = 'all'; // 'all', 0, -1, -2
+var CURRENT_CUENTA = null;
+var CURRENT_CUENTA_FILTER = 'all'; // 'all', 0, -1, -2
 
 function openCuentaDetalle(cuenta) {
   CURRENT_CUENTA = cuenta;
@@ -2676,12 +2676,12 @@ function renderCuentaMovs() {
   if (!CURRENT_CUENTA) return;
   const cont = document.getElementById('cuentaDetalleMovs');
   const titleEl = document.getElementById('cuentaMovsTitle');
-  let movs = ALL_DATA.movimientos.filter(m => {
+  var movs = ALL_DATA.movimientos.filter(m => {
     const c = props(m.properties, 'Cuenta', '');
     return c === CURRENT_CUENTA.name;
   });
   const now = new Date();
-  let titleText = 'Movimientos';
+  var titleText = 'Movimientos';
   if (CURRENT_CUENTA_FILTER !== 'all') {
     const offset = Number(CURRENT_CUENTA_FILTER);
     const targetMonth = new Date(now.getFullYear(), now.getMonth() + offset, 1);
@@ -2720,10 +2720,10 @@ function renderCuentaMovs() {
     const sym = moneda === 'USD' ? '$' : 'Q';
     const isExpense = tipo.toLowerCase().includes('gasto') || tipo.toLowerCase().includes('pago') || tipo.toLowerCase().includes('compra') || tipo.toLowerCase().includes('transf') || tipo.toLowerCase().includes('retiro');
     const isIncome = tipo.toLowerCase().includes('ingreso') || tipo.toLowerCase().includes('sueldo') || tipo.toLowerCase().includes('deposito');
-    let sign = '';
+    var sign = '';
     if (isExpense && !isIncome) sign = '-';
     else if (isIncome) sign = '+';
-    let cls = 'mov';
+    var cls = 'mov';
     if (isIncome) cls += ' income';
     else if (isExpense) cls += ' expense';
     return `<div class="list-item">
