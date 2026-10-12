@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="96" fill="#0a0d10"/>
+  <g transform="translate(256, 280)" font-family="Georgia, 'Times New Roman', serif" font-size="280" fill="#2dd4a8" text-anchor="middle" font-weight="500" font-style="italic">
+    <text y="80">M</text>
+  </g>
+  <rect x="100" y="400" width="80" height="6" rx="3" fill="#2dd4a8"/>
+  <rect x="200" y="400" width="80" height="6" rx="3" fill="#fbbf24"/>
+  <rect x="300" y="400" width="80" height="6" rx="3" fill="#f472b6"/>
+</svg>

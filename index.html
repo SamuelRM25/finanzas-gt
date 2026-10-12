@@ -8,8 +8,9 @@
 <meta name="apple-mobile-web-app-title" content="MiFinanza">
 <meta name="theme-color" content="#0a0d10">
 <meta name="description" content="App de finanzas personales">
-<title>💰 MiFinanza</title>
-<link rel="icon" type="image/svg+xml" href="/favicon.ico">
+<title>MiFinanza</title>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="apple-touch-icon" href="/favicon.svg">
 <link rel="manifest" href="/manifest.json">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -118,7 +119,39 @@ input, select, textarea { font-family: inherit; }
 }
 .auth-overlay.show .auth-card { transform: translateY(0); }
 
-.auth-brand { font-family: var(--font-display); font-size: 36px; margin-bottom: 8px; letter-spacing: -0.02em; }
+.auth-brand { font-family: var(--font-display); font-size: 36px; margin-bottom: 8px; letter-spacing: -0.02em; display: inline-flex; align-items: center; gap: 10px; }
+.auth-mark {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 44px; height: 44px;
+  background: var(--bg-2); color: var(--jade-bright);
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 28px; font-style: italic; font-weight: 500;
+}
+
+/* ---------- SISTEMA DE ICONOS SOBRIO (sin emojis) ---------- */
+.ic {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 28px; height: 28px;
+  border-radius: 6px;
+  font-size: 10px; font-weight: 600;
+  font-family: var(--font-mono); letter-spacing: 0.02em;
+  background: var(--bg-3); color: var(--text-2);
+  flex-shrink: 0;
+}
+.ic-sm { width: 22px; height: 22px; font-size: 9px; }
+.ic-lg { width: 36px; height: 36px; font-size: 12px; }
+.ic-jade { background: rgba(45, 212, 168, 0.12); color: var(--jade-bright); }
+.ic-gold { background: rgba(251, 191, 36, 0.12); color: var(--gold); }
+.ic-coral { background: rgba(244, 114, 182, 0.12); color: var(--coral); }
+.ic-violet { background: rgba(168, 85, 247, 0.12); color: #a855f7; }
+.ic-blue { background: rgba(96, 165, 250, 0.12); color: #60a5fa; }
+.ic-slate { background: rgba(148, 163, 184, 0.12); color: #94a3b8; }
+.ic-up { background: rgba(45, 212, 168, 0.12); color: var(--jade-bright); }
+.ic-down { background: rgba(244, 114, 182, 0.12); color: var(--coral); }
+.ic-warn { background: rgba(251, 191, 36, 0.12); color: var(--gold); }
+.ic-circle { border-radius: 50%; }
 .auth-subtitle { color: var(--text-dim); font-size: 14px; margin-bottom: 24px; }
 .auth-input {
   width: 100%;
@@ -765,7 +798,8 @@ input, select, textarea { font-family: inherit; }
   width: 36px; height: 36px;
   border-radius: var(--radius-md);
   display: flex; align-items: center; justify-content: center;
-  font-size: 15px; font-weight: 600;
+  font-size: 12px; font-weight: 600;
+  font-family: var(--font-mono); letter-spacing: 0.02em;
   flex-shrink: 0;
 }
 .list-icon.income { background: var(--jade-glow); color: var(--jade-bright); }
@@ -1009,7 +1043,7 @@ mark.search-highlight { background: rgba(251, 191, 36, 0.3); color: var(--text-1
   padding: 32px 16px;
   color: var(--text-dim);
 }
-.empty-icon { font-size: 32px; margin-bottom: 8px; opacity: 0.5; }
+.empty-icon { font-size: 11px; margin-bottom: 8px; opacity: 0.4; font-family: var(--font-mono); letter-spacing: 0.1em; }
 .empty-text { font-size: 14px; margin-bottom: 12px; }
 
 /* ============================================
@@ -1094,7 +1128,7 @@ mark.search-highlight { background: rgba(251, 191, 36, 0.3); color: var(--text-1
 <!-- AUTH -->
 <div class="auth-overlay show" id="authOverlay">
   <div class="auth-card">
-    <div class="auth-brand">💰 MiFinanza</div>
+    <div class="auth-brand"><span class="auth-mark">M</span> MiFinanza</div>
     <!-- Modo contraseña (default) -->
     <div id="authPasswordMode">
       <div class="auth-subtitle" id="authSubtitle">Introduce tu contraseña</div>
@@ -1106,8 +1140,8 @@ mark.search-highlight { background: rgba(251, 191, 36, 0.3); color: var(--text-1
       <button class="auth-btn" id="authBtn">Entrar</button>
       <div class="auth-error" id="authError"></div>
       <div id="biometricQuickAccess" style="display:none; margin-top: 16px; display: flex; gap: 8px;">
-        <button class="auth-btn-secondary" id="biometricBtn" style="flex:1;">🔓 Usar biometría</button>
-        <button class="auth-btn-secondary" id="pinBtn" style="flex:1;">🔢 Usar PIN</button>
+      <button class="auth-btn-secondary" id="biometricBtn" style="flex:1;">Usar biometría</button>
+      <button class="auth-btn-secondary" id="pinBtn" style="flex:1;">Usar PIN</button>
       </div>
     </div>
     <!-- Modo PIN -->
@@ -1155,7 +1189,7 @@ mark.search-highlight { background: rgba(251, 191, 36, 0.3); color: var(--text-1
     </div>
     <div class="month-pill" id="monthPill">—</div>
     <div class="topbar-actions">
-      <button class="icon-btn" id="searchBtn" title="Buscar (Ctrl/Cmd + K)">🔍</button>
+      <button class="icon-btn" id="searchBtn" title="Buscar (Ctrl/Cmd + K)">Q</button>
       <button class="icon-btn" id="refreshBtn" title="Actualizar">↻</button>
     </div>
   </header>
@@ -1463,7 +1497,7 @@ mark.search-highlight { background: rgba(251, 191, 36, 0.3); color: var(--text-1
     <div class="modal search-modal">
       <div class="modal-grabber"></div>
       <div class="search-input-wrap">
-        <span class="search-icon">🔍</span>
+        <span class="search-icon">Q</span>
         <input type="text" class="search-input" id="globalSearchInput" placeholder="Buscar movimientos, visacuotas, préstamos, metas..." autocomplete="off">
         <kbd class="search-kbd">esc</kbd>
       </div>
@@ -1479,67 +1513,67 @@ mark.search-highlight { background: rgba(251, 191, 36, 0.3); color: var(--text-1
       <div class="modal-grabber"></div>
       <div class="modal-header">
         <div class="modal-title">Más opciones</div>
-        <button class="modal-close" data-close="moreModal">✕</button>
+        <button class="modal-close" data-close="moreModal">X</button>
       </div>
       <div class="list">
         <button class="list-item" data-go="presupuesto" style="width:100%; text-align:left; background:none;">
-          <div class="list-icon" style="background: rgba(251, 191, 36, 0.15); color: var(--gold);">$</div>
+          <div class="list-icon" style="background: rgba(251, 191, 36, 0.15); color: var(--gold);">P</div>
           <div class="list-info">
             <div class="list-title">Presupuesto</div>
             <div class="list-meta">Gastos planeados y pagados</div>
           </div>
         </button>
         <button class="list-item" data-go="metas" style="width:100%; text-align:left; background:none;">
-          <div class="list-icon goal">★</div>
+          <div class="list-icon goal">M</div>
           <div class="list-info">
             <div class="list-title">Metas de ahorro</div>
             <div class="list-meta">Ahorra con estrategia</div>
           </div>
         </button>
         <button class="list-item" data-go="prestamos" style="width:100%; text-align:left; background:none;">
-          <div class="list-icon loan">$</div>
+          <div class="list-icon loan">B</div>
           <div class="list-info">
             <div class="list-title">Préstamos</div>
             <div class="list-meta">Cuotas, intereses, saldos</div>
           </div>
         </button>
         <button class="list-item" data-go="visacuotas" style="width:100%; text-align:left; background:none;">
-          <div class="list-icon visa">$</div>
+          <div class="list-icon visa">V</div>
           <div class="list-info">
             <div class="list-title">Visacuotas</div>
             <div class="list-meta">Compras a cuotas</div>
           </div>
         </button>
         <button class="list-item" data-go="calendario" style="width:100%; text-align:left; background:none;">
-          <div class="list-icon" style="background: rgba(168, 85, 247, 0.15); color: #a855f7;">▦</div>
+          <div class="list-icon" style="background: rgba(168, 85, 247, 0.15); color: #a855f7;">C</div>
           <div class="list-info">
             <div class="list-title">Calendario de pagos</div>
             <div class="list-meta">Cuotas, vencimientos</div>
           </div>
         </button>
         <button class="list-item" data-action="open-ocr" style="width:100%; text-align:left; background:none;">
-          <div class="list-icon" style="background: rgba(34, 197, 94, 0.15); color: #22c55e;">📷</div>
+          <div class="list-icon" style="background: rgba(34, 197, 94, 0.15); color: #22c55e;">O</div>
           <div class="list-info">
             <div class="list-title">Escanear recibo</div>
             <div class="list-meta">OCR con foto</div>
           </div>
         </button>
         <button class="list-item" data-action="generate-pdf" style="width:100%; text-align:left; background:none;">
-          <div class="list-icon" style="background: rgba(239, 68, 68, 0.15); color: #ef4444;">📄</div>
+          <div class="list-icon" style="background: rgba(239, 68, 68, 0.15); color: #ef4444;">R</div>
           <div class="list-info">
             <div class="list-title">Reporte mensual PDF</div>
             <div class="list-meta">Descargar mes actual</div>
           </div>
         </button>
         <button class="list-item" data-action="open-simulador" style="width:100%; text-align:left; background:none;">
-          <div class="list-icon" style="background: var(--jade-glow); color: var(--jade-bright);">⌥</div>
+          <div class="list-icon" style="background: var(--jade-glow); color: var(--jade-bright);">S</div>
           <div class="list-info">
             <div class="list-title">Simulador</div>
             <div class="list-meta">Préstamo · ahorro · visacuotas</div>
           </div>
         </button>
         <button class="list-item" data-action="open-settings" style="width:100%; text-align:left; background:none;">
-          <div class="list-icon" style="background: var(--bg-3); color: var(--text-dim);">⚙</div>
+          <div class="list-icon" style="background: var(--bg-3); color: var(--text-dim);">A</div>
           <div class="list-info">
             <div class="list-title">Ajustes</div>
             <div class="list-meta">Tipo de cambio, sesión</div>
@@ -1555,13 +1589,13 @@ mark.search-highlight { background: rgba(251, 191, 36, 0.3); color: var(--text-1
       <div class="modal-grabber"></div>
       <div class="modal-header">
         <div class="modal-title">Nuevo movimiento</div>
-        <button class="modal-close" data-close="movimientoModal">✕</button>
+        <button class="modal-close" data-close="movimientoModal">X</button>
       </div>
       <div class="type-toggle" id="typeToggle">
         <button type="button" class="type-btn expense active" data-type="expense"><span class="type-icon">↓</span> Gasto</button>
         <button type="button" class="type-btn income" data-type="income"><span class="type-icon">↑</span> Ingreso</button>
         <button type="button" class="type-btn transfer" data-type="transfer"><span class="type-icon">↔</span> Transf.</button>
-        <button type="button" class="type-btn tc" data-type="tc"><span class="type-icon">💳</span> Pagar TC</button>
+        <button type="button" class="type-btn tc" data-type="tc"><span class="type-icon">C</span> Pagar TC</button>
       </div>
 
       <div class="form-field">
@@ -1625,7 +1659,7 @@ mark.search-highlight { background: rgba(251, 191, 36, 0.3); color: var(--text-1
       <div class="modal-grabber"></div>
       <div class="modal-header">
         <div class="modal-title" id="addOptionTitle">Agregar opción</div>
-        <button class="modal-close" data-close="addOptionModal">✕</button>
+        <button class="modal-close" data-close="addOptionModal">X</button>
       </div>
       <div class="form-field">
         <label class="form-label" id="addOptionLabel">Nombre</label>
@@ -1641,7 +1675,7 @@ mark.search-highlight { background: rgba(251, 191, 36, 0.3); color: var(--text-1
       <div class="modal-grabber"></div>
       <div class="modal-header">
         <div class="modal-title">Nuevo presupuesto</div>
-        <button class="modal-close" data-close="presupuestoModal">✕</button>
+        <button class="modal-close" data-close="presupuestoModal">X</button>
       </div>
       <div class="form-field">
         <label class="form-label">Concepto</label>
@@ -1672,7 +1706,7 @@ mark.search-highlight { background: rgba(251, 191, 36, 0.3); color: var(--text-1
       <div class="modal-grabber"></div>
       <div class="modal-header">
         <div class="modal-title">Nueva meta</div>
-        <button class="modal-close" data-close="metaModal">✕</button>
+        <button class="modal-close" data-close="metaModal">X</button>
       </div>
       <div class="form-field">
         <label class="form-label">Nombre de la meta</label>
@@ -1699,7 +1733,7 @@ mark.search-highlight { background: rgba(251, 191, 36, 0.3); color: var(--text-1
       <div class="form-field">
         <label class="form-label">Cuota sugerida mensual (Q)</label>
         <input type="number" class="input" id="metaCuota" step="0.01" min="0" placeholder="0.00">
-        <button type="button" class="text-btn" id="calcMetaBtn" style="margin-top:8px; color: var(--jade-bright);">⚡ Calcular sugerida</button>
+        <button type="button" class="text-btn" id="calcMetaBtn" style="margin-top:8px; color: var(--jade-bright);">> Calcular sugerida</button>
         <div class="calc-result hidden" id="calcMetaResult"></div>
       </div>
       <div class="form-field">
@@ -1716,7 +1750,7 @@ mark.search-highlight { background: rgba(251, 191, 36, 0.3); color: var(--text-1
       <div class="modal-grabber"></div>
       <div class="modal-header">
         <div class="modal-title" id="detailModalTitle">Detalle</div>
-        <button class="modal-close" data-close="detailModal">✕</button>
+        <button class="modal-close" data-close="detailModal">X</button>
       </div>
       <div id="detailModalBody"></div>
     </div>
@@ -1728,7 +1762,7 @@ mark.search-highlight { background: rgba(251, 191, 36, 0.3); color: var(--text-1
       <div class="modal-grabber"></div>
       <div class="modal-header">
         <div class="modal-title" id="tarjetaModalTitle">Nueva tarjeta</div>
-        <button class="modal-close" data-close="tarjetaModal">✕</button>
+        <button class="modal-close" data-close="tarjetaModal">X</button>
       </div>
       <input type="hidden" id="tarjetaId">
       <div class="form-field">
@@ -1771,7 +1805,7 @@ mark.search-highlight { background: rgba(251, 191, 36, 0.3); color: var(--text-1
       <div class="modal-grabber"></div>
       <div class="modal-header">
         <div class="modal-title" id="tcVisacuotasTitle">Visacuotas</div>
-        <button class="modal-close" data-close="tcVisacuotasModal">✕</button>
+        <button class="modal-close" data-close="tcVisacuotasModal">X</button>
       </div>
       <div class="list" id="tcVisacuotasList"></div>
     </div>
@@ -1783,7 +1817,7 @@ mark.search-highlight { background: rgba(251, 191, 36, 0.3); color: var(--text-1
       <div class="modal-grabber"></div>
       <div class="modal-header">
         <div class="modal-title">Escanear recibo</div>
-        <button class="modal-close" data-close="ocrModal">✕</button>
+        <button class="modal-close" data-close="ocrModal">X</button>
       </div>
       <div class="form-field">
         <label class="form-label">Foto del recibo</label>
@@ -1822,7 +1856,7 @@ mark.search-highlight { background: rgba(251, 191, 36, 0.3); color: var(--text-1
       <div class="modal-grabber"></div>
       <div class="modal-header">
         <div class="modal-title">Nuevo préstamo</div>
-        <button class="modal-close" data-close="prestamoModal">✕</button>
+        <button class="modal-close" data-close="prestamoModal">X</button>
       </div>
       <div class="form-field">
         <label class="form-label">Nombre del préstamo</label>
@@ -1864,7 +1898,7 @@ mark.search-highlight { background: rgba(251, 191, 36, 0.3); color: var(--text-1
         <label class="form-label">Fecha de inicio</label>
         <input type="date" class="input" id="presFechaInicio">
       </div>
-      <button type="button" class="submit-btn" id="calcPrestamoBtn" style="background: var(--gold); color: #1c1303;">⚡ Calcular</button>
+      <button type="button" class="submit-btn" id="calcPrestamoBtn" style="background: var(--gold); color: #1c1303;">> Calcular</button>
       <div class="calc-result hidden" id="calcPrestamoResult"></div>
       <div class="form-field">
         <label class="form-label">Notas</label>
@@ -1880,7 +1914,7 @@ mark.search-highlight { background: rgba(251, 191, 36, 0.3); color: var(--text-1
       <div class="modal-grabber"></div>
       <div class="modal-header">
         <div class="modal-title">Nueva visacuota</div>
-        <button class="modal-close" data-close="visacuotaModal">✕</button>
+        <button class="modal-close" data-close="visacuotaModal">X</button>
       </div>
       <div class="form-field">
         <label class="form-label">Nombre</label>
@@ -1908,7 +1942,7 @@ mark.search-highlight { background: rgba(251, 191, 36, 0.3); color: var(--text-1
           <input type="date" class="input" id="visFecha">
         </div>
       </div>
-      <button type="button" class="submit-btn" id="calcVisacuotaBtn" style="background: var(--gold); color: #1c1303;">⚡ Calcular</button>
+      <button type="button" class="submit-btn" id="calcVisacuotaBtn" style="background: var(--gold); color: #1c1303;">> Calcular</button>
       <div class="calc-result hidden" id="calcVisacuotaResult"></div>
       <div class="form-field">
         <label class="form-label">Tarjeta de crédito *</label>
@@ -1930,7 +1964,7 @@ mark.search-highlight { background: rgba(251, 191, 36, 0.3); color: var(--text-1
       <div class="modal-grabber"></div>
       <div class="modal-header">
         <div class="modal-title">Simulador financiero</div>
-        <button class="modal-close" data-close="simuladorModal">✕</button>
+        <button class="modal-close" data-close="simuladorModal">X</button>
       </div>
 
       <div class="type-toggle" id="simTab">
@@ -1959,7 +1993,7 @@ mark.search-highlight { background: rgba(251, 191, 36, 0.3); color: var(--text-1
           <label class="form-label">Plazo (meses)</label>
           <input type="number" class="input" id="simLoanPlazo" min="1">
         </div>
-        <button type="button" class="submit-btn" id="calcSimLoanBtn" style="background: var(--gold); color: #1c1303;">⚡ Calcular</button>
+        <button type="button" class="submit-btn" id="calcSimLoanBtn" style="background: var(--gold); color: #1c1303;">> Calcular</button>
         <div class="calc-result hidden" id="simLoanResult"></div>
       </div>
 
@@ -1981,7 +2015,7 @@ mark.search-highlight { background: rgba(251, 191, 36, 0.3); color: var(--text-1
           <label class="form-label">Tasa anual (%)</label>
           <input type="number" class="input" id="simSaveTasa" step="0.01" placeholder="0">
         </div>
-        <button type="button" class="submit-btn" id="calcSimSaveBtn" style="background: var(--gold); color: #1c1303;">⚡ Calcular</button>
+        <button type="button" class="submit-btn" id="calcSimSaveBtn" style="background: var(--gold); color: #1c1303;">> Calcular</button>
         <div class="calc-result hidden" id="simSaveResult"></div>
       </div>
 
@@ -1999,7 +2033,7 @@ mark.search-highlight { background: rgba(251, 191, 36, 0.3); color: var(--text-1
           <label class="form-label">Interés mensual (%)</label>
           <input type="number" class="input" id="simVisaTasa" step="0.01" placeholder="0 = sin interés">
         </div>
-        <button type="button" class="submit-btn" id="calcSimVisaBtn" style="background: var(--gold); color: #1c1303;">⚡ Calcular</button>
+        <button type="button" class="submit-btn" id="calcSimVisaBtn" style="background: var(--gold); color: #1c1303;">> Calcular</button>
         <div class="calc-result hidden" id="simVisaResult"></div>
       </div>
     </div>
@@ -2011,7 +2045,7 @@ mark.search-highlight { background: rgba(251, 191, 36, 0.3); color: var(--text-1
       <div class="modal-grabber"></div>
       <div class="modal-header">
         <div class="modal-title">Ajustes</div>
-        <button class="modal-close" data-close="settingsModal">✕</button>
+        <button class="modal-close" data-close="settingsModal">X</button>
       </div>
 
       <h3 style="margin: 16px 0 8px; font-family: var(--font-display); font-size: 18px;">Contraseña</h3>
@@ -2039,12 +2073,12 @@ mark.search-highlight { background: rgba(251, 191, 36, 0.3); color: var(--text-1
       </p>
       <button type="button" class="submit-btn" style="background: var(--coral); color: #fff;" id="logoutBtn">Cerrar sesión</button>
 
-      <h3 style="margin: 24px 0 8px; font-family: var(--font-display); font-size: 18px;">🔔 Telegram (#40)</h3>
+      <h3 style="margin: 24px 0 8px; font-family: var(--font-display); font-size: 18px;">Telegram (#40)</h3>
       <p style="color: var(--text-dim); font-size: 12px; margin-bottom: 8px;">
         Conecta un bot de Telegram para recibir notificaciones y registrar gastos por chat.
       </p>
       <div id="telegramStatus" style="padding: 10px 14px; background: var(--bg-input); border-radius: 8px; margin-bottom: 8px; font-size: 12px;">
-        ⏳ Verificando...
+        Verificando...
       </div>
       <div class="form-field">
         <label class="form-label">Bot Token (de @BotFather)</label>
@@ -2059,7 +2093,7 @@ mark.search-highlight { background: rgba(251, 191, 36, 0.3); color: var(--text-1
         <button type="button" class="submit-btn" style="background: var(--gold); color: #1c1303; flex: 1;" id="telegramSaveBtn">Guardar</button>
       </div>
       <details style="margin-top: 12px;">
-        <summary style="cursor: pointer; font-size: 12px; color: var(--text-2); font-weight: 500;">📖 Comandos disponibles</summary>
+        <summary style="cursor: pointer; font-size: 12px; color: var(--text-2); font-weight: 500;">Comandos disponibles</summary>
         <div style="padding: 12px; background: var(--bg-input); border-radius: 8px; margin-top: 8px; font-size: 12px; line-height: 1.6;">
           <div><code style="background: var(--bg-2); padding: 2px 6px; border-radius: 4px;">gasté Q50 almuerzo</code> — Registra gasto</div>
           <div><code style="background: var(--bg-2); padding: 2px 6px; border-radius: 4px;">gasté $20 uber</code> — Gasto en USD</div>
@@ -2070,7 +2104,7 @@ mark.search-highlight { background: rgba(251, 191, 36, 0.3); color: var(--text-1
         </div>
       </details>
       <details style="margin-top: 8px;">
-        <summary style="cursor: pointer; font-size: 12px; color: var(--text-2); font-weight: 500;">🔌 Atajos desde la app</summary>
+        <summary style="cursor: pointer; font-size: 12px; color: var(--text-2); font-weight: 500;">Atajos desde la app</summary>
         <div style="padding: 12px; background: var(--bg-input); border-radius: 8px; margin-top: 8px; font-size: 12px;">
           <input type="text" class="input" id="shortcutInput" placeholder='Ej: "gasté Q120 en super"' style="margin-bottom: 8px;">
           <button class="submit-btn" style="background: var(--jade-dim); color: var(--jade-bright); width: 100%;" id="shortcutRunBtn">Ejecutar comando</button>
@@ -2214,7 +2248,7 @@ function saveSettings() {
 document.getElementById('saveSettingsBtn').addEventListener('click', () => {
   SETTINGS.exchangeRate = Number(document.getElementById('settingsExchangeRate').value) || 7.8;
   saveSettings();
-  showToast('✓ Ajustes guardados', 'success');
+  showToast('Ajustes guardados', 'success');
   closeModal('settingsModal');
 });
 
@@ -2230,12 +2264,12 @@ async function loadTelegramStatus() {
   try {
     const r = await api('/api/integrations/status');
     if (r.telegram.configured) {
-      el.innerHTML = '✅ <b style="color: var(--jade-bright);">Telegram activo</b><br><span style="font-size: 11px;">Webhook: <code>' + r.webhookUrl + '</code></span>';
+      el.innerHTML = '<b style="color: var(--jade-bright);">[OK] Telegram activo</b><br><span style="font-size: 11px;">Webhook: <code>' + r.webhookUrl + '</code></span>';
     } else {
-      el.innerHTML = '⚠️ <b>Telegram no configurado</b><br><span style="font-size: 11px;">Configura el bot abajo y agrega las env vars en Render.</span>';
+      el.innerHTML = '<b style="color: var(--gold);">! Telegram no configurado</b><br><span style="font-size: 11px;">Configura el bot abajo y agrega las env vars en Render.</span>';
     }
   } catch (e) {
-    el.innerHTML = '❌ Error: ' + e.message;
+    el.innerHTML = '[ERR] ' + e.message;
   }
 }
 
@@ -2254,7 +2288,7 @@ document.getElementById('telegramTestBtn')?.addEventListener('click', async func
       method: 'POST',
       body: JSON.stringify({ botToken: token, chatId: chatId }),
     });
-    if (r.ok) showToast('✓ Mensaje enviado a Telegram', 'success');
+    if (r.ok) showToast('Mensaje enviado a Telegram', 'success');
     else showToast('Error: ' + (r.error || 'desconocido'), 'error');
   } catch (e) { showToast('Error: ' + e.message, 'error'); }
 });
@@ -2266,7 +2300,7 @@ document.getElementById('telegramSaveBtn')?.addEventListener('click', async func
   // Guardar en localStorage como referencia, pero recordatorio: requiere env vars
   localStorage.setItem('mifinanza_telegram_token', token);
   localStorage.setItem('mifinanza_telegram_chat', chatId);
-  showToast('✓ Guardado en este dispositivo. Para que el servidor envíe mensajes, agrega TELEGRAM_BOT_TOKEN y TELEGRAM_CHAT_ID en Render → Environment.', 'info', 6000);
+  showToast('Guardado en este dispositivo. Para que el servidor envíe mensajes, agrega TELEGRAM_BOT_TOKEN y TELEGRAM_CHAT_ID en Render → Environment.', 'info', 6000);
 });
 
 document.getElementById('shortcutRunBtn')?.addEventListener('click', async function() {
@@ -2274,7 +2308,7 @@ document.getElementById('shortcutRunBtn')?.addEventListener('click', async funct
   const resultEl = document.getElementById('shortcutResult');
   if (!cmd) { showToast('Escribe un comando', 'error'); return; }
   resultEl.style.display = 'block';
-  resultEl.innerHTML = '⏳ Ejecutando...';
+  resultEl.innerHTML = 'Ejecutando...';
   try {
     const r = await api('/api/shortcuts/ejecutar', {
       method: 'POST',
@@ -2282,14 +2316,14 @@ document.getElementById('shortcutRunBtn')?.addEventListener('click', async funct
     });
     resultEl.innerHTML = (r.respuesta || JSON.stringify(r)).replace(/\n/g, '<br>');
     document.getElementById('shortcutInput').value = '';
-  } catch (e) { resultEl.innerHTML = '❌ ' + e.message; }
+  } catch (e) { resultEl.innerHTML = '[ERR] ' + e.message; }
 });
 
 /* ---------- TOAST ---------- */
 function showToast(msg, type = 'success') {
   const t = document.getElementById('toast');
   t.className = 'toast show ' + type;
-  t.querySelector('.toast-icon').textContent = type === 'success' ? '✓' : '✕';
+  t.querySelector('.toast-icon').textContent = type === 'success' ? 'OK' : 'X';
   t.querySelector('.toast-text').textContent = msg;
   clearTimeout(t._timer);
   t._timer = setTimeout(() => t.className = 'toast', 3000);
@@ -2490,7 +2524,7 @@ document.getElementById('saveOptionBtn').addEventListener('click', async () => {
     renderSelect(addOptionContext.targetId, getOptions(addOptionContext.field));
     document.getElementById(addOptionContext.targetId).value = name;
     closeModal('addOptionModal');
-    showToast('✓ Opción agregada', 'success');
+    showToast('Opción agregada', 'success');
   } catch (e) {
     showToast('Error: ' + e.message, 'error');
   }
@@ -2521,7 +2555,7 @@ document.addEventListener('click', async (e) => {
         });
       }
       closeModal('tarjetaModal');
-      showToast('✓ Tarjeta guardada', 'success');
+      showToast('Tarjeta guardada', 'success');
       await cargarTodo();
     } catch (e) { showToast('Error: ' + e.message, 'error'); }
   }
@@ -2534,7 +2568,7 @@ document.addEventListener('click', async (e) => {
     try {
       await api('/api/tarjetas/' + id, { method: 'DELETE' });
       closeModal('tarjetaModal');
-      showToast('✓ Tarjeta eliminada', 'success');
+      showToast('Tarjeta eliminada', 'success');
       await cargarTodo();
     } catch (e) { showToast('Error: ' + e.message, 'error'); }
   }
@@ -2660,7 +2694,7 @@ document.addEventListener('click', (e) => {
         const saldo = props(v.properties, 'Saldo pendiente', 0);
         const estado = props(v.properties, 'Estado', '?');
         return '<div class="list-item">' +
-          '<div class="list-icon">🛍️</div>' +
+          '<div class="list-icon">V</div>' +
           '<div class="list-info"><div class="list-title">' + escapeHtml(nombre) + '</div>' +
           '<div class="list-meta">Cuota ' + pag + '/' + total + ' · ' + estado + '</div></div>' +
           '<div class="list-amount expense">' + fmt(saldo) + '</div></div>';
@@ -2714,10 +2748,10 @@ document.getElementById('submitMovimiento').addEventListener('click', async () =
   try {
     await api('/api/movements', { method: 'POST', body: JSON.stringify(payload) });
     const msg = currentType === 'transfer'
-      ? `✓ Transferido ${fmt(monto, currentMoneda)} de ${cuenta} → ${destino}`
+      ? `OK Transferido ${fmt(monto, currentMoneda)} de ${cuenta} → ${destino}`
       : currentType === 'tc'
-      ? `✓ Pagado ${fmt(monto, currentMoneda)} de ${cuenta} a ${destino}`
-      : `✓ ${tipoMap[currentType].label}: ${fmt(monto, currentMoneda)}`;
+      ? `OK Pagado ${fmt(monto, currentMoneda)} de ${cuenta} a ${destino}`
+      : `OK ${tipoMap[currentType].label}: ${fmt(monto, currentMoneda)}`;
     showToast(msg, 'success');
     closeModal('movimientoModal');
     document.getElementById('monto').value = '';
@@ -2909,7 +2943,7 @@ function renderTarjetas() {
     const fechaPago = t.fechaPago ? new Date(t.fechaPago + 'T00:00:00').toLocaleDateString('es-GT', { day: 'numeric', month: 'short' }) : '—';
     const fechaCorte = t.fechaCorte ? new Date(t.fechaCorte + 'T00:00:00').toLocaleDateString('es-GT', { day: 'numeric', month: 'short' }) : '—';
     return '<div class="account-card tc" data-tarjeta-id="' + t.id + '" data-tarjeta-name="' + escapeHtml(t.name) + '">' +
-      '<div class="account-name"><span class="account-icon">💳</span>' + escapeHtml(t.name) + '</div>' +
+      '<div class="account-name"><span class="account-icon">C</span>' + escapeHtml(t.name) + '</div>' +
       '<div class="account-balance ' + (disponible < 0 ? 'negative' : 'positive') + '">' + fmt(disponible) + '</div>' +
       '<div class="tc-details">' +
         '<div class="tc-row"><span>Saldo actual</span><span>' + fmt(t.saldoActual) + '</span></div>' +
@@ -2928,10 +2962,10 @@ function renderTarjetas() {
 function getAccountIcon(name) {
   const n = name.toLowerCase();
   if (n.startsWith('tc ')) return '◇';
-  if (n.includes('efectivo')) return '💵';
-  if (n.includes('cooperativa')) return '🏛';
-  if (n.includes('tigo') || n.includes('yep') || n.includes('wipay')) return '📱';
-  return '🏦';
+  if (n.includes('efectivo')) return 'E';
+  if (n.includes('cooperativa')) return 'C';
+  if (n.includes('tigo') || n.includes('yep') || n.includes('wipay')) return 'M';
+  return 'B';
 }
 
 function renderDashboardExtras() {
@@ -2940,7 +2974,7 @@ function renderDashboardExtras() {
   const pendientes = ALL_DATA.presupuestos.filter(p => props(p.properties, 'Estado', '') === 'Pendiente');
   const totalPendiente = pendientes.reduce((s, p) => s + props(p.properties, 'Limite mensual', 0), 0);
   if (pendientes.length === 0) {
-    presContainer.innerHTML = '<div class="empty"><div class="empty-icon">✓</div>Sin pendientes</div>';
+    presContainer.innerHTML = '<div class="empty"><div class="empty-icon">OK</div>Sin pendientes</div>';
   } else {
     presContainer.innerHTML = `
       <div class="presupuesto-total">Por pagar: <strong>${fmt(totalPendiente)}</strong> · ${pendientes.length} pendiente${pendientes.length !== 1 ? 's' : ''}</div>
@@ -2962,7 +2996,7 @@ function renderDashboardExtras() {
   const metasContainer = document.getElementById('dashboardMetas');
   const metas = ALL_DATA.metas.filter(m => props(m.properties, 'Estado', '') === 'Activa').slice(0, 3);
   if (metas.length === 0) {
-    metasContainer.innerHTML = '<div class="empty"><div class="empty-icon">🎯</div>Sin metas activas</div>';
+    metasContainer.innerHTML = '<div class="empty"><div class="empty-icon">M</div>Sin metas activas</div>';
   } else {
     metasContainer.innerHTML = metas.map(m => {
       const name = props(m.properties, 'Meta', '?');
@@ -2970,7 +3004,7 @@ function renderDashboardExtras() {
       const saved = props(m.properties, 'Ahorrado', 0);
       const pct = obj > 0 ? Math.min(100, (saved / obj) * 100) : 0;
       return `<div class="list-item">
-        <div class="list-icon goal">🎯</div>
+        <div class="list-icon goal">M</div>
         <div class="list-info">
           <div class="list-title">${escapeHtml(name)}</div>
           <div class="list-meta">${fmt(saved)} / ${fmt(obj)} · ${pct.toFixed(0)}%</div>
@@ -2991,7 +3025,7 @@ function renderDashboardExtras() {
         nombre: props(p.properties, 'Prestamo', '?'),
         restantes: tot - pag,
         cuota: props(p.properties, 'Cuota mensual', 0),
-        tipo: '🏦',
+        tipo: 'B',
         class: 'loan',
       });
     }
@@ -3004,13 +3038,13 @@ function renderDashboardExtras() {
         nombre: props(v.properties, 'Nombre', '?'),
         restantes: tot - pag,
         cuota: props(v.properties, 'Cuota mensual', 0),
-        tipo: '🛍️',
+        tipo: 'V',
         class: 'visa',
       });
     }
   });
   if (activos.length === 0) {
-    prestContainer.innerHTML = '<div class="empty"><div class="empty-icon">✓</div>Sin cuotas pendientes</div>';
+    prestContainer.innerHTML = '<div class="empty"><div class="empty-icon">OK</div>Sin cuotas pendientes</div>';
   } else {
     prestContainer.innerHTML = activos.slice(0, 4).map(a => `
       <div class="list-item">
@@ -3044,7 +3078,7 @@ function renderMovimientos() {
     const esIngreso = signo > 0;
     const esTransfer = tipo === 'Transferencia';
     const esPagoTC = tipo === 'Pago de tarjeta';
-    const icon = esIngreso ? '↑' : esTransfer ? '↔' : esPagoTC ? '💳' : '↓';
+    const icon = esIngreso ? '↑' : esTransfer ? '↔' : esPagoTC ? 'C' : '↓';
     const iconClass = esIngreso ? 'income' : esTransfer ? 'transfer' : 'expense';
     return `<div class="list-item">
       <div class="list-icon ${iconClass}">${icon}</div>
@@ -3060,7 +3094,7 @@ function renderMovimientos() {
 function renderPresupuestos() {
   const cont = document.getElementById('presupuestoList');
   if (ALL_DATA.presupuestos.length === 0) {
-    cont.innerHTML = '<div class="empty"><div class="empty-icon">📊</div>Sin presupuesto. Toca "+ Agregar"</div>';
+    cont.innerHTML = '<div class="empty"><div class="empty-icon">P</div>Sin presupuesto. Toca "+ Agregar"</div>';
     return;
   }
   cont.innerHTML = ALL_DATA.presupuestos.map(p => {
@@ -3069,7 +3103,7 @@ function renderPresupuestos() {
     const estado = props(p.properties, 'Estado', 'Pendiente');
     const fecha = props(p.properties, 'Fecha limite', '');
     return `<div class="list-item">
-      <div class="list-icon" style="background: ${estado === 'Pagado' ? 'var(--jade-glow)' : 'var(--gold-glow)'}; color: ${estado === 'Pagado' ? 'var(--jade-bright)' : 'var(--gold)'};">${estado === 'Pagado' ? '✓' : '!'}</div>
+      <div class="list-icon" style="background: ${estado === 'Pagado' ? 'var(--jade-glow)' : 'var(--gold-glow)'}; color: ${estado === 'Pagado' ? 'var(--jade-bright)' : 'var(--gold)'};">${estado === 'Pagado' ? 'OK' : '!'}</div>
       <div class="list-info">
         <div class="list-title">${escapeHtml(cat)}</div>
         <div class="list-meta">${fmt(lim)}${fecha ? ' · vence ' + fmtFecha(fecha) : ''} · ${estado}</div>
@@ -3093,7 +3127,7 @@ function renderMetas() {
     const estrategia = props(m.properties, 'Estrategia', '');
     const pct = obj > 0 ? Math.min(100, (saved / obj) * 100) : 0;
     return `<div class="list-item">
-      <div class="list-icon goal">★</div>
+          <div class="list-icon goal">M</div>
       <div class="list-info">
         <div class="list-title">${escapeHtml(name)}</div>
         <div class="list-meta">${fmt(saved)} / ${fmt(obj)} · ${pct.toFixed(0)}%${estrategia ? ' · ' + estrategia : ''}</div>
@@ -3108,7 +3142,7 @@ function renderMetas() {
 function renderPrestamos() {
   const cont = document.getElementById('prestamosList');
   if (ALL_DATA.prestamos.length === 0) {
-    cont.innerHTML = '<div class="empty"><div class="empty-icon">🏦</div>Sin préstamos. Toca "+ Agregar"</div>';
+    cont.innerHTML = '<div class="empty"><div class="empty-icon">B</div>Sin préstamos. Toca "+ Agregar"</div>';
     return;
   }
   cont.innerHTML = ALL_DATA.prestamos.map(p => {
@@ -3119,7 +3153,7 @@ function renderPrestamos() {
     const totalPagar = props(p.properties, 'Total a pagar', 0);
     const restantes = total - pag;
     return `<div class="list-item" data-action="view-prestamo" data-id="${p.id}">
-      <div class="list-icon loan">🏦</div>
+      <div class="list-icon loan">B</div>
       <div class="list-info">
         <div class="list-title">${escapeHtml(name)}</div>
         <div class="list-meta">${restantes}/${total} cuotas · ${fmt(cuota)}/mes · total ${fmt(totalPagar)}</div>
@@ -3133,7 +3167,7 @@ function renderPrestamos() {
 function renderVisacuotas() {
   const cont = document.getElementById('visacuotasList');
   if (ALL_DATA.visacuotas.length === 0) {
-    cont.innerHTML = '<div class="empty"><div class="empty-icon">🛍️</div>Sin visacuotas. Toca "+ Agregar"</div>';
+    cont.innerHTML = '<div class="empty"><div class="empty-icon">V</div>Sin visacuotas. Toca "+ Agregar"</div>';
     return;
   }
   cont.innerHTML = ALL_DATA.visacuotas.map(v => {
@@ -3145,7 +3179,7 @@ function renderVisacuotas() {
     const tarjeta = props(v.properties, 'Tarjeta', '');
     const restantes = total - pag;
     return `<div class="list-item" data-action="view-visacuota" data-id="${v.id}">
-      <div class="list-icon visa">🛍️</div>
+      <div class="list-icon visa">V</div>
       <div class="list-info">
         <div class="list-title">${escapeHtml(name)}</div>
         <div class="list-meta">${tarjeta ? escapeHtml(tarjeta) + ' · ' : ''}${restantes}/${total} · ${fmt(cuota)}/mes · ${fmt(saldo)} restante</div>
@@ -3168,7 +3202,7 @@ document.addEventListener('click', async (e) => {
         method: 'PATCH',
         body: JSON.stringify({ estado: 'Pagado', montoPagado: 0 }),
       });
-      showToast('✓ Marcado como pagado', 'success');
+      showToast('Marcado como pagado', 'success');
       await loadPresupuestos();
     } catch (e) { showToast('Error: ' + e.message, 'error'); }
   }
@@ -3193,7 +3227,7 @@ document.addEventListener('click', async (e) => {
           nota: `Aporte a meta "${nombre}"`,
         }),
       });
-      showToast(`✓ Q${m.toFixed(2)} agregado a "${nombre}"`, 'success');
+      showToast(`OK Q${m.toFixed(2)} agregado a "${nombre}"`, 'success');
       await cargarTodo();
     } catch (e) { showToast('Error: ' + e.message, 'error'); }
   }
@@ -3313,7 +3347,7 @@ document.addEventListener('click', async (e) => {
         method: 'PATCH',
         body: JSON.stringify({ cuotasPagadas: pagadas + 1 }),
       });
-      showToast(`✓ Cuota pagada (${fmt(cuota)})`, 'success');
+      showToast(`OK Cuota pagada (${fmt(cuota)})`, 'success');
       await cargarTodo();
     } catch (e) { showToast('Error: ' + e.message, 'error'); }
   }
@@ -3331,7 +3365,7 @@ document.getElementById('savePresupuesto').addEventListener('click', async () =>
       categoria, limiteMensual: limite, fechaLimite: fecha || null, estado: 'Pendiente', notas,
     })});
     closeModal('presupuestoModal');
-    showToast('✓ Presupuesto creado', 'success');
+    showToast('Presupuesto creado', 'success');
     await loadPresupuestos();
   } catch (e) { showToast('Error: ' + e.message, 'error'); }
 });
@@ -3369,7 +3403,7 @@ document.getElementById('saveMeta').addEventListener('click', async () => {
       meta, montoObjetivo: monto, fechaObjetivo: fecha || null, estrategia: estrategia || null, cuotaSugerida: cuota, notas,
     })});
     closeModal('metaModal');
-    showToast('✓ Meta creada', 'success');
+    showToast('Meta creada', 'success');
     await loadMetas();
   } catch (e) { showToast('Error: ' + e.message, 'error'); }
 });
@@ -3420,7 +3454,7 @@ document.getElementById('savePrestamo').addEventListener('click', async () => {
       prestamo, tipo, contraparte, montoTotal, tasaInteres, tipoTasa, fechaInicio, cuotasTotales, notas,
     })});
     closeModal('prestamoModal');
-    showToast('✓ Préstamo guardado', 'success');
+    showToast('Préstamo guardado', 'success');
     await loadPrestamos();
   } catch (e) { showToast('Error: ' + e.message, 'error'); }
 });
@@ -3459,7 +3493,7 @@ document.getElementById('saveVisacuota').addEventListener('click', async () => {
       nombre, establecimiento, montoTotal, cuotasTotales, tasaMensual, fechaCompra, tarjeta, notas,
     })});
     closeModal('visacuotaModal');
-    showToast('✓ Visacuota guardada', 'success');
+    showToast('Visacuota guardada', 'success');
     await loadVisacuotas();
   } catch (e) { showToast('Error: ' + e.message, 'error'); }
 });
@@ -3803,7 +3837,7 @@ function renderCalendario() {
     dayList.innerHTML = '<div class="empty">No hay pagos este día</div>';
   } else {
     dayList.innerHTML = dayPagosToShow.map(function(p) {
-      const icon = p.type === 'prestamo' ? '🏦' : '🛍️';
+      const icon = p.type === 'prestamo' ? 'B' : 'V';
       const urgency = p.isPast ? 'vencido' : (p.isToday ? 'hoy' : 'en ' + p.daysUntil + 'd');
       return '<div class="list-item" data-action="' + (p.type === 'prestamo' ? 'view-prestamo' : 'view-visacuota') + '" data-id="' + p.itemId + '">' +
         '<div class="list-icon ' + p.type + '">' + icon + '</div>' +
@@ -3835,10 +3869,10 @@ function renderProximasCuotas() {
     return;
   }
   cont.innerHTML = proximos.map(function(p) {
-    let icon = '🛍️';
-    if (p.type === 'prestamo') icon = '🏦';
-    else if (p.type === 'tarjeta') icon = '💳';
-    const urgency = p.isToday ? '🔥 HOY' : 'en ' + p.daysUntil + 'd';
+    let icon = 'V';
+    if (p.type === 'prestamo') icon = 'B';
+    else if (p.type === 'tarjeta') icon = 'C';
+    const urgency = p.isToday ? 'HOY' : 'en ' + p.daysUntil + 'd';
     const dateLabel = p.date.toLocaleDateString('es-GT', { day: 'numeric', month: 'short' });
     return '<div class="cuota-mini' + (p.isToday ? ' urgent' : '') + '">' +
       '<div class="cuota-mini-icon ' + p.type + '">' + icon + '</div>' +
@@ -3934,7 +3968,7 @@ function runSearch(query) {
       const total = props(v.properties, 'Cuotas totales', 0);
       results.push({
         type: 'visacuota',
-        icon: '🛍️',
+        icon: 'V',
         title: nombre,
         meta: (establecimiento || tarjeta || '') + ' · ' + pag + '/' + total + ' cuotas',
         amount: props(v.properties, 'Saldo pendiente', 0).toFixed(2),
@@ -3953,7 +3987,7 @@ function runSearch(query) {
       const total = props(p.properties, 'Cuotas totales', 0);
       results.push({
         type: 'prestamo',
-        icon: '🏦',
+        icon: 'B',
         title: nombre,
         meta: 'Préstamo · ' + pag + '/' + total + ' cuotas',
         amount: props(p.properties, 'Cuota mensual', 0).toFixed(2),
@@ -3971,7 +4005,7 @@ function runSearch(query) {
       const objetivo = props(meta.properties, 'Monto objetivo', 0);
       results.push({
         type: 'meta',
-        icon: '🎯',
+        icon: 'M',
         title: nombre,
         meta: 'Meta · ' + actual.toFixed(0) + ' / ' + objetivo.toFixed(0),
         amount: objetivo > 0 ? Math.round((actual / objetivo) * 100) + '%' : '0%',
@@ -3987,7 +4021,7 @@ function runSearch(query) {
     if (nombre.toLowerCase().includes(q)) {
       results.push({
         type: 'presupuesto',
-        icon: '📊',
+        icon: 'P',
         title: nombre,
         meta: 'Presupuesto',
         amount: '',
@@ -4005,7 +4039,7 @@ function runSearch(query) {
       seenAccounts.add(cuenta);
       results.push({
         type: 'cuenta',
-        icon: '🏦',
+        icon: 'B',
         title: cuenta,
         meta: 'Cuenta · ir a detalle',
         amount: '',
@@ -4018,7 +4052,7 @@ function runSearch(query) {
     if (t.name.toLowerCase().includes(q) || (t.banco && t.banco.toLowerCase().includes(q))) {
       results.push({
         type: 'tarjeta',
-        icon: '💳',
+        icon: 'C',
         title: t.name,
         meta: 'Tarjeta · ' + (t.banco || ''),
         amount: '',
@@ -4032,7 +4066,7 @@ function runSearch(query) {
   SEARCH_ACTIVE_IDX = 0;
 
   if (SEARCH_RESULTS.length === 0) {
-    cont.innerHTML = '<div class="search-no-results"><div class="search-no-results-icon">🔍</div>Sin resultados para "' + escapeHtml(query) + '"</div>';
+    cont.innerHTML = '<div class="search-no-results"><div class="search-no-results-icon">Q</div>Sin resultados para "' + escapeHtml(query) + '"</div>';
     return;
   }
 
@@ -4138,7 +4172,7 @@ function selectSearchResult(idx) {
       const pag = props(v.properties, 'Cuotas pagadas', 0);
       const total = props(v.properties, 'Cuotas totales', 0);
       const saldo = props(v.properties, 'Saldo pendiente', 0);
-      return '<div class="list-item"><div class="list-icon">🛍️</div><div class="list-info"><div class="list-title">' + escapeHtml(nombre) + '</div><div class="list-meta">Cuota ' + pag + '/' + total + '</div></div><div class="list-amount expense">' + fmt(saldo) + '</div></div>';
+      return '<div class="list-item"><div class="list-icon">V</div><div class="list-info"><div class="list-title">' + escapeHtml(nombre) + '</div><div class="list-meta">Cuota ' + pag + '/' + total + '</div></div><div class="list-amount expense">' + fmt(saldo) + '</div></div>';
     }).join('');
     openModal('tcVisacuotasModal');
   }
@@ -4264,7 +4298,7 @@ function renderSuscripciones() {
   }
   section.style.display = '';
   cont.innerHTML = subs.map(s => {
-    const icon = s.aumento ? '⚠️' : '🔁';
+    const icon = s.aumento ? '!' : '~';
     const deltaHtml = s.aumento
       ? '<span class="suscripcion-delta">+' + s.deltaPct.toFixed(0) + '%</span>'
       : '';
@@ -4383,7 +4417,7 @@ document.getElementById('calNextMonth').addEventListener('click', function() {
 /* ---------- SERVICE WORKER (#35) ---------- */
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/sw.js').then(function(reg) {
-    console.log('✓ Service Worker registrado');
+    console.log('OK Service Worker registrado');
   }).catch(function(err) {
     console.log('Service Worker no disponible:', err.message);
   });
@@ -4402,15 +4436,15 @@ function checkUpcomingNotifications() {
     if (p.daysUntil < 0 || p.daysUntil > 3) continue;
     const key = p.itemId + ':' + p.name;
     if (notified[today].includes(key)) continue;
-    const icon = p.type === 'prestamo' ? '🏦' : '🛍️';
+    const icon = p.type === 'prestamo' ? 'B' : 'V';
     const urgency = p.daysUntil === 0 ? 'HOY' : (p.daysUntil === 1 ? 'MAÑANA' : 'en ' + p.daysUntil + ' días');
     const title = icon + ' Cuota ' + urgency;
     const body = p.name + ' — ' + fmt(p.monto);
     try {
       const notif = new Notification(title, {
         body: body,
-        icon: '/favicon.ico',
-        badge: '/favicon.ico',
+        icon: '/favicon.svg',
+        badge: '/favicon.svg',
         tag: 'cuota-' + p.itemId,
         requireInteraction: p.daysUntil <= 1,
       });
@@ -4533,13 +4567,13 @@ document.addEventListener('change', async function(e) {
     document.getElementById('ocrProgress').innerText = '0%';
     try {
       const result = await handleReciboImage(file);
-      document.getElementById('ocrProgress').innerText = '✓';
+      document.getElementById('ocrProgress').innerText = 'OK';
       document.getElementById('ocrRawText').innerText = result.text;
       if (result.monto) document.getElementById('ocrMonto').value = result.monto.toFixed(2);
       if (result.establecimiento) document.getElementById('ocrEstablecimiento').value = result.establecimiento;
     } catch (e) {
       showToast('Error OCR: ' + e.message, 'error');
-      document.getElementById('ocrProgress').innerText = '✗';
+      document.getElementById('ocrProgress').innerText = 'ERR';
     }
   }
 });
@@ -4563,7 +4597,7 @@ document.addEventListener('click', async function(e) {
           nota: 'Recibo escaneado: ' + establecimiento,
         }),
       });
-      showToast('✓ Recibo guardado como movimiento', 'success');
+      showToast('Recibo guardado como movimiento', 'success');
       closeModal('ocrModal');
       await cargarTodo();
     } catch (e) { showToast('Error: ' + e.message, 'error'); }
@@ -4748,7 +4782,7 @@ async function generateMonthlyPDF() {
 
   const fileName = 'MiFinanza-' + MESES[month] + '-' + year + '.pdf';
   doc.save(fileName);
-  showToast('✓ PDF descargado: ' + fileName, 'success');
+  showToast('PDF descargado: ' + fileName, 'success');
 }
 
 document.addEventListener('click', function(e) {
@@ -4802,7 +4836,7 @@ function buildPinPad(containerId, onDigit, onDelete) {
     if (k === 'biometric') {
       btn.classList.add('action');
       if (window.PublicKeyCredential) {
-        btn.textContent = '👆';
+        btn.textContent = 'B';
         btn.title = 'Usar biometría';
         btn.onclick = tryBiometric;
       } else {
@@ -4810,7 +4844,7 @@ function buildPinPad(containerId, onDigit, onDelete) {
       }
     } else if (k === 'delete') {
       btn.classList.add('action');
-      btn.textContent = '⌫';
+      btn.textContent = '<';
       btn.onclick = onDelete;
     } else {
       btn.textContent = k;
@@ -4915,7 +4949,7 @@ function handleSetPinDelete() {
 
 async function saveSetPin() {
   if (SET_PIN !== SET_PIN_CONFIRM) {
-    document.getElementById('setPinStatus').innerText = '✗ No coinciden, intenta de nuevo';
+    document.getElementById('setPinStatus').innerText = 'No coinciden, intenta de nuevo';
     document.getElementById('setPinStatus').style.color = 'var(--coral)';
     SET_PIN = '';
     SET_PIN_CONFIRM = '';
@@ -4930,7 +4964,7 @@ async function saveSetPin() {
   const hash = await hashPin(SET_PIN);
   localStorage.setItem(PIN_STORAGE_KEY, hash);
   localStorage.removeItem('mifinanza_pin_skipped');
-  document.getElementById('setPinStatus').innerText = '✓ PIN guardado';
+  document.getElementById('setPinStatus').innerText = 'OK PIN guardado';
   document.getElementById('setPinStatus').style.color = 'var(--jade-bright)';
   setTimeout(() => {
     document.getElementById('authOverlay').classList.add('hidden');
@@ -4987,12 +5021,12 @@ async function init() {
   setTimeout(function() {
     if (Notification && Notification.permission === 'default') {
       const btn = document.createElement('button');
-      btn.innerHTML = '🔔 Activar recordatorios de pagos';
+      btn.innerHTML = 'Activar recordatorios de pagos';
       btn.style.cssText = 'position:fixed; bottom:80px; left:50%; transform:translateX(-50%); z-index:999; padding:10px 18px; background:var(--jade-dim); color:var(--jade-bright); border:1px solid var(--jade); border-radius:999px; font-size:13px; font-weight:600; cursor:pointer; box-shadow:0 4px 20px rgba(0,0,0,0.3);';
       btn.onclick = async function() {
         const ok = await requestNotifPermission();
         if (ok) {
-          showToast('✓ Recordatorios activados', 'success');
+          showToast('Recordatorios activados', 'success');
           checkUpcomingNotifications();
         } else {
           showToast('Permiso denegado', 'error');

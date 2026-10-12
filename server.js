@@ -827,7 +827,7 @@ app.get('/api/integrations/status', checkAuth, async (req, res) => {
 });
 
 app.post('/api/telegram/test', checkAuth, async (req, res) => {
-  const result = await sendTelegramMessage('🧪 <b>Test desde MiFinanza</b>\n\nSi ves este mensaje, Telegram está configurado correctamente.');
+  const result = await sendTelegramMessage('<b>Test MiFinanza</b>\n\nSi ves este mensaje, Telegram está configurado correctamente.');
   res.json(result);
 });
 
@@ -839,7 +839,7 @@ app.post('/api/integrations/telegram', checkAuth, async (req, res) => {
     const r = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ chat_id: chatId, text: '🧪 Test MiFinanza — Telegram configurado' }),
+      body: JSON.stringify({ chat_id: chatId, text: 'Test MiFinanza — Telegram configurado' }),
     });
     const data = await r.json();
     if (data.ok) {
@@ -880,7 +880,7 @@ async function procesarComando(text) {
   const lower = text.toLowerCase().trim();
   // /start
   if (lower === '/start' || lower === 'hola') {
-    return '👋 <b>MiFinanza Bot</b>\n\nComandos disponibles:\n• <code>gasté Q50 almuerzo</code>\n• <code>ingreso Q5000</code>\n• <code>saldo</code>\n• <code>próximos</code>\n• <code>hoy</code> / <code>mes</code>';
+    return '<b>MiFinanza Bot</b>\n\nComandos disponibles:\n• <code>gasté Q50 almuerzo</code>\n• <code>ingreso Q5000</code>\n• <code>saldo</code>\n• <code>próximos</code>\n• <code>hoy</code> / <code>mes</code>';
   }
   // saldo
   if (lower === 'saldo' || lower === '/saldo') {
@@ -901,7 +901,7 @@ async function procesarComando(text) {
       else if (tipo.includes('gasto') || tipo.includes('compra') || tipo.includes('pago')) gastos += monto;
     }
     const balance = ingresos - gastos;
-    return `💰 <b>Balance ${['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'][month]}</b>\n\n↑ Ingresos: Q${ingresos.toFixed(2)}\n↓ Gastos: Q${gastos.toFixed(2)}\n\n<b>${balance >= 0 ? '✅' : '⚠️'} Balance: Q${balance.toFixed(2)}</b>`;
+    return `<b>Balance ${['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'][month]}</b>\n\n↑ Ingresos: Q${ingresos.toFixed(2)}\n↓ Gastos: Q${gastos.toFixed(2)}\n\n<b>${balance >= 0 ? '[OK]' : '[!]'} Balance: Q${balance.toFixed(2)}</b>`;
   }
   // próximos
   if (lower === 'próximos' || lower === '/proximos' || lower === 'próximo') {
@@ -911,8 +911,8 @@ async function procesarComando(text) {
       });
       const data = await r.json();
       const pagos = data.payments || [];
-      if (pagos.length === 0) return '✅ Sin pagos próximos en los siguientes 7 días';
-      return '📅 <b>Pagos próximos:</b>\n\n' + pagos.map(p => {
+      if (pagos.length === 0) return '[OK] Sin pagos próximos en los siguientes 7 días';
+      return '<b>Pagos próximos:</b>\n\n' + pagos.map(p => {
         const f = new Date(p.fecha).toLocaleDateString('es-GT', { day: 'numeric', month: 'short' });
         return `• ${f} — ${p.name} (Q${p.monto.toFixed(2)})`;
       }).join('\n');
@@ -923,8 +923,8 @@ async function procesarComando(text) {
     const data = await queryDatabase(IDS.dataSourceMov, {}, [], 100);
     const today = new Date().toISOString().split('T')[0];
     const movs = (data.results || []).filter(m => m.properties?.Fecha?.date?.start === today);
-    if (movs.length === 0) return '📅 Sin movimientos hoy';
-    return `📅 <b>Hoy (${movs.length} movimientos):</b>\n\n` + movs.map(m => {
+    if (movs.length === 0) return 'Sin movimientos hoy';
+    return `<b>Hoy (${movs.length} movimientos):</b>\n\n` + movs.map(m => {
       const nombre = m.properties?.Nombre?.title?.[0]?.text?.content || '?';
       const tipo = m.properties?.Tipo?.select?.name || '?';
       const monto = m.properties?.Monto?.number || 0;
@@ -962,8 +962,8 @@ async function procesarComando(text) {
           Nota: { rich_text: [{ text: { content: 'Registrado desde Telegram: ' + desc } }] },
         });
         const sym = moneda === 'USD' ? '$' : 'Q';
-        return `✅ Gasto registrado: ${sym}${monto.toFixed(2)} en ${desc}\nCategoría: ${categoria}`;
-      } catch (e) { return '❌ Error al registrar: ' + e.message; }
+        return `[OK] Gasto registrado: ${sym}${monto.toFixed(2)} en ${desc}\nCategoría: ${categoria}`;
+      } catch (e) { return '[ERR] Error al registrar: ' + e.message; }
     }
   }
   // ingreso: "ingreso Q5000" o "+Q5000 sueldo"
@@ -987,8 +987,8 @@ async function procesarComando(text) {
           Nota: { rich_text: [{ text: { content: 'Registrado desde Telegram: ' + desc } }] },
         });
         const sym = moneda === 'USD' ? '$' : 'Q';
-        return `✅ Ingreso registrado: ${sym}${monto.toFixed(2)} — ${desc}`;
-      } catch (e) { return '❌ Error al registrar: ' + e.message; }
+        return `[OK] Ingreso registrado: ${sym}${monto.toFixed(2)} — ${desc}`;
+      } catch (e) { return '[ERR] Error al registrar: ' + e.message; }
     }
   }
   return '❓ No entendí. Prueba: <code>gasté Q50 almuerzo</code>, <code>saldo</code>, <code>próximos</code>';
@@ -1073,11 +1073,11 @@ app.post('/api/cron/notifications', async (req, res) => {
       return res.json({ ok: true, sent: false, reason: 'Sin pagos próximos' });
     }
 
-    const lines = ['🔔 <b>Pagos próximos (' + days + ' días):</b>', ''];
+    const lines = ['<b>Pagos próximos (' + days + ' días):</b>', ''];
     for (const p of result.sort((a, b) => a.daysUntil - b.daysUntil)) {
       const f = p.fecha.toLocaleDateString('es-GT', { day: 'numeric', month: 'short' });
-      const urgency = p.daysUntil === 0 ? '🔥 HOY' : (p.daysUntil === 1 ? '⏰ MAÑANA' : 'en ' + p.daysUntil + 'd');
-      const icon = p.type === 'prestamo' ? '🏦' : '💳';
+      const urgency = p.daysUntil === 0 ? 'HOY' : (p.daysUntil === 1 ? 'MAÑANA' : 'en ' + p.daysUntil + 'd');
+      const icon = p.type === 'prestamo' ? '[B]' : '[C]';
       lines.push(icon + ' ' + urgency + ' · ' + f + '\n   ' + p.name + ' — Q' + p.monto.toFixed(2));
     }
     const text = lines.join('\n');
@@ -1210,10 +1210,15 @@ app.get('/health', (req, res) => res.json({ ok: true }));
 // FAVICON
 // ============================================
 app.get('/favicon.ico', (req, res) => {
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y="80" font-size="80">💰</text></svg>`;
   res.setHeader('Content-Type', 'image/svg+xml');
   res.setHeader('Cache-Control', 'public, max-age=86400');
-  res.send(svg);
+  res.sendFile(path.join(__dirname, 'favicon.svg'));
+});
+
+app.get('/favicon.svg', (req, res) => {
+  res.setHeader('Content-Type', 'image/svg+xml');
+  res.setHeader('Cache-Control', 'public, max-age=86400');
+  res.sendFile(path.join(__dirname, 'favicon.svg'));
 });
 
 // Static files
@@ -1228,7 +1233,7 @@ app.get('/sw.js', (req, res) => {
 app.use((req, res) => res.status(404).json({ error: 'Not found' }));
 
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`💰 MiFinanza on port ${PORT}`);
+  console.log(`MiFinanza on port ${PORT}`);
   console.log(`   TOKEN: ${NOTION_TOKEN ? 'OK' : 'MISSING'}`);
   console.log(`   PASSWORD: ${APP_PASSWORD ? 'set' : 'open'}`);
 });
