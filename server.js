@@ -17,12 +17,14 @@ const IDS = {
   metas: '3f5e0d97deba8167a56affcb6ed1dc7b',
   prestamos: '3f5e0d97deba8106a007d9b0bdbd0bdb',
   visacuotas: '3f6e0d97deba81b0acdbdc68104dd09a',
+  tarjetas: '3ee575263b0e4e72a40757690bc846e2',
   // Data source IDs (para queries y properties)
   dataSourceMov: '3f5e0d97deba814ebf1b000bc7a38d76',
   dataSourcePres: '3f5e0d97deba8152b5d3000b53c4e437',
   dataSourceMetas: '3f5e0d97deba8125b910000bd21f101e',
   dataSourcePrest: '3f5e0d97deba81c589af000b847016bf',
   dataSourceVisa: '3f6e0d97deba81b18396000be7473244',
+  dataSourceTarjetas: '512162cf5fda449ab49be3af66596efa',
 };
 const APP_PASSWORD = process.env.APP_PASSWORD || '';
 const NOTION_TOKEN = process.env.NOTION_TOKEN || '';
@@ -190,37 +192,48 @@ app.get('/api/upcoming-payments', checkAuth, async (req, res) => {
   } catch (e) { console.error('Error cargando prestamos:', e.message); }
 
   try {
-    // Visacuotas
+    // Visacuotas agrupadas por TC (mostrar fecha_pago de la TC, no individual)
     const visResult = await queryDatabase(IDS.dataSourceVisa, {}, [], 100);
+    const tarjetas = await loadTarjetas();
+    const tcByName = {};
+    for (const t of tarjetas) tcByName[t.name] = t;
+
+    // Agrupar visacuotas activas por TC
+    const porTc = {};
     for (const v of (visResult.results || [])) {
       const vProps = v.properties;
       const pag = getNumber(vProps, 'Cuotas pagadas');
       const total = getNumber(vProps, 'Cuotas totales');
       if (pag >= total) continue;
       const cuota = getNumber(vProps, 'Cuota mensual') || 0;
-      const nombre = getTitle(vProps, 'Nombre');
-      const fechaCompra = getDate(vProps, 'Fecha compra');
-      if (!fechaCompra) continue;
-      const inicioDate = new Date(fechaCompra);
-      let proximaFecha = new Date(inicioDate);
-      proximaFecha.setMonth(inicioDate.getMonth() + pag);
+      const tarjeta = getText(vProps, 'Tarjeta');
+      if (!tarjeta) continue; // sin TC asignada, no se puede calcular fecha
+      if (!porTc[tarjeta]) porTc[tarjeta] = { monto: 0, count: 0, items: [] };
+      porTc[tarjeta].monto += cuota;
+      porTc[tarjeta].count += 1;
+      porTc[tarjeta].items.push({ id: v.id, cuota, pag, total });
+    }
+
+    for (const [tcName, grupo] of Object.entries(porTc)) {
+      const tc = tcByName[tcName];
+      if (!tc || !tc.fechaPago) continue;
+      // Calcular próxima fecha de pago >= hoy
+      let proximaFecha = new Date(tc.fechaPago + 'T00:00:00');
+      // Si la fecha de pago ya pasó este mes, sumar 1 mes
       if (proximaFecha < now) {
-        proximaFecha = new Date(now.getFullYear(), now.getMonth(), inicioDate.getDate());
-        if (proximaFecha < now) {
-          proximaFecha.setMonth(proximaFecha.getMonth() + 1);
-        }
+        proximaFecha = new Date(proximaFecha.getFullYear(), proximaFecha.getMonth() + 1, proximaFecha.getDate());
       }
       const daysUntil = Math.ceil((proximaFecha - now) / (1000 * 60 * 60 * 24));
       if (daysUntil <= days) {
         result.push({
-          id: v.id,
-          type: 'visacuota',
-          name: nombre,
-          cuota: pag + 1,
-          total: total,
-          monto: cuota,
+          id: 'tc:' + tcName,
+          type: 'tarjeta',
+          name: tcName,
+          monto: grupo.monto,
           fecha: proximaFecha.toISOString().split('T')[0],
           daysUntil,
+          tarjeta: { name: tcName, fechaPago: tc.fechaPago, fechaCorte: tc.fechaCorte, saldoActual: tc.saldoActual },
+          visacuotasCount: grupo.count,
         });
       }
     }
@@ -246,6 +259,11 @@ function getDate(props, key) {
   const v = props[key];
   if (!v || v.type !== 'date') return null;
   return v.date?.start || null;
+}
+function getText(props, key) {
+  const v = props[key];
+  if (!v || v.type !== 'rich_text') return '';
+  return (v.rich_text || []).map(r => r.plain_text || r.text?.content || '').join('');
 }
 
 app.post('/api/options', checkAuth, async (req, res) => {
@@ -661,15 +679,110 @@ app.post('/api/visacuotas', checkAuth, async (req, res) => {
 app.patch('/api/visacuotas/:id', checkAuth, async (req, res) => {
   try {
     const { id } = req.params;
-    const { estado, cuotasPagadas, establecimiento, notas } = req.body || {};
+    const { estado, cuotasPagadas, establecimiento, notas, tarjeta } = req.body || {};
     const props = {};
     if (estado !== undefined) props.Estado = { select: { name: estado } };
     if (cuotasPagadas !== undefined) props['Cuotas pagadas'] = { number: Number(cuotasPagadas) };
     if (establecimiento !== undefined) props.Establecimiento = { rich_text: [{ text: { content: establecimiento } }] };
     if (notas !== undefined) props.Notas = { rich_text: [{ text: { content: notas } }] };
+    if (tarjeta !== undefined) props.Tarjeta = { rich_text: [{ text: { content: tarjeta } }] };
 
     const page = await updatePage(id, props);
     res.json({ ok: true, id: page.id });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ============================================
+// TARJETAS DE CRÉDITO
+// ============================================
+async function loadTarjetas() {
+  try {
+    const r = await notionFetch(`/data_sources/${IDS.dataSourceTarjetas}/query`, {
+      method: 'POST',
+      body: JSON.stringify({ page_size: 50 }),
+    });
+    if (!r.ok) return [];
+    const data = await r.json();
+    return (data.results || []).map(p => ({
+      id: p.id,
+      name: p.properties?.Name?.title?.[0]?.plain_text || p.properties?.Name?.title?.[0]?.text?.content || '',
+      banco: p.properties?.Banco?.rich_text?.[0]?.plain_text || p.properties?.Banco?.rich_text?.[0]?.text?.content || '',
+      fechaPago: p.properties?.['Fecha pago']?.date?.start || null,
+      fechaCorte: p.properties?.['Fecha corte']?.date?.start || null,
+      saldoActual: p.properties?.['Saldo actual']?.number || 0,
+      notas: p.properties?.Notas?.rich_text?.[0]?.plain_text || '',
+    }));
+  } catch (e) { return []; }
+}
+
+app.get('/api/tarjetas', checkAuth, async (req, res) => {
+  try {
+    const tarjetas = await loadTarjetas();
+    res.json({ results: tarjetas });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post('/api/tarjetas', checkAuth, async (req, res) => {
+  try {
+    const { name, banco, fechaPago, fechaCorte, saldoActual, notas } = req.body || {};
+    if (!name) return res.status(400).json({ error: 'name requerido' });
+    const props = {
+      Name: { title: [{ text: { content: name } }] },
+      Banco: banco ? { rich_text: [{ text: { content: banco } }] } : undefined,
+      'Fecha pago': fechaPago ? { date: { start: fechaPago } } : undefined,
+      'Fecha corte': fechaCorte ? { date: { start: fechaCorte } } : undefined,
+      'Saldo actual': { number: Number(saldoActual) || 0 },
+      Notas: notas ? { rich_text: [{ text: { content: notas } }] } : undefined,
+    };
+    const r = await notionFetch('/pages', {
+      method: 'POST',
+      body: JSON.stringify({
+        parent: { data_source_id: IDS.dataSourceTarjetas },
+        properties: props,
+      }),
+    });
+    if (!r.ok) {
+      const text = await r.text();
+      throw new Error(`Notion ${r.status}: ${text}`);
+    }
+    const page = await r.json();
+    res.json({ ok: true, id: page.id });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.patch('/api/tarjetas/:id', checkAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, banco, fechaPago, fechaCorte, saldoActual, notas } = req.body || {};
+    const props = {};
+    if (name !== undefined) props.Name = { title: [{ text: { content: name } }] };
+    if (banco !== undefined) props.Banco = { rich_text: [{ text: { content: banco } }] };
+    if (fechaPago !== undefined) props['Fecha pago'] = fechaPago ? { date: { start: fechaPago } } : { date: null };
+    if (fechaCorte !== undefined) props['Fecha corte'] = fechaCorte ? { date: { start: fechaCorte } } : { date: null };
+    if (saldoActual !== undefined) props['Saldo actual'] = { number: Number(saldoActual) || 0 };
+    if (notas !== undefined) props.Notas = { rich_text: [{ text: { content: notas } }] };
+    await updatePage(id, props);
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.delete('/api/tarjetas/:id', checkAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const r = await notionFetch(`/pages/${id}`, { method: 'DELETE' });
+    if (!r.ok) {
+      const text = await r.text();
+      throw new Error(`Notion ${r.status}: ${text}`);
+    }
+    res.json({ ok: true });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
