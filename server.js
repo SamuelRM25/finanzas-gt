@@ -142,6 +142,111 @@ app.get('/api/options', checkAuth, async (req, res) => {
     res.status(500).json({ error: e.message });
   }
 });
+app.get('/api/upcoming-payments', checkAuth, async (req, res) => {
+  // Devuelve los pagos de los próximos N días (default 7)
+  const days = Number(req.query.days) || 7;
+  const now = new Date();
+  const endDate = new Date(now.getTime() + days * 24 * 60 * 60 * 1000);
+  const result = [];
+
+  try {
+    // Préstamos
+    const presResult = await queryDatabase(IDS.dataSourcePrest, {}, [], 100);
+    for (const p of (presResult.results || [])) {
+      const pProps = p.properties;
+      const pag = getNumber(pProps, 'Cuotas pagadas');
+      const total = getNumber(pProps, 'Cuotas totales');
+      if (pag >= total) continue;
+      const cuota = getNumber(pProps, 'Cuota mensual');
+      const nombre = getTitle(pProps, 'Prestamo');
+      const inicio = getDate(pProps, 'Fecha inicio');
+      if (!inicio) continue;
+      // Calcular próxima cuota
+      const inicioDate = new Date(inicio);
+      const mesesDesdeInicio = (now.getFullYear() - inicioDate.getFullYear()) * 12 + (now.getMonth() - inicioDate.getMonth());
+      let proximaCuotaNum = pag + 1;
+      let proximaFecha = new Date(inicioDate);
+      proximaFecha.setMonth(inicioDate.getMonth() + pag);
+      if (proximaFecha < now) {
+        proximaFecha = new Date(now.getFullYear(), now.getMonth(), inicioDate.getDate());
+        if (proximaFecha < now) {
+          proximaFecha.setMonth(proximaFecha.getMonth() + 1);
+        }
+      }
+      const daysUntil = Math.ceil((proximaFecha - now) / (1000 * 60 * 60 * 24));
+      if (daysUntil <= days) {
+        result.push({
+          id: p.id,
+          type: 'prestamo',
+          name: nombre,
+          cuota: proximaCuotaNum,
+          total: total,
+          monto: cuota,
+          fecha: proximaFecha.toISOString().split('T')[0],
+          daysUntil,
+        });
+      }
+    }
+  } catch (e) { console.error('Error cargando prestamos:', e.message); }
+
+  try {
+    // Visacuotas
+    const visResult = await queryDatabase(IDS.dataSourceVisa, {}, [], 100);
+    for (const v of (visResult.results || [])) {
+      const vProps = v.properties;
+      const pag = getNumber(vProps, 'Cuotas pagadas');
+      const total = getNumber(vProps, 'Cuotas totales');
+      if (pag >= total) continue;
+      const cuota = getNumber(vProps, 'Cuota mensual') || 0;
+      const nombre = getTitle(vProps, 'Nombre');
+      const fechaCompra = getDate(vProps, 'Fecha compra');
+      if (!fechaCompra) continue;
+      const inicioDate = new Date(fechaCompra);
+      let proximaFecha = new Date(inicioDate);
+      proximaFecha.setMonth(inicioDate.getMonth() + pag);
+      if (proximaFecha < now) {
+        proximaFecha = new Date(now.getFullYear(), now.getMonth(), inicioDate.getDate());
+        if (proximaFecha < now) {
+          proximaFecha.setMonth(proximaFecha.getMonth() + 1);
+        }
+      }
+      const daysUntil = Math.ceil((proximaFecha - now) / (1000 * 60 * 60 * 24));
+      if (daysUntil <= days) {
+        result.push({
+          id: v.id,
+          type: 'visacuota',
+          name: nombre,
+          cuota: pag + 1,
+          total: total,
+          monto: cuota,
+          fecha: proximaFecha.toISOString().split('T')[0],
+          daysUntil,
+        });
+      }
+    }
+  } catch (e) { console.error('Error cargando visacuotas:', e.message); }
+
+  result.sort((a, b) => a.daysUntil - b.daysUntil);
+  res.json({ payments: result });
+});
+
+function getNumber(props, key) {
+  const v = props[key];
+  if (!v) return 0;
+  if (v.type === 'number') return v.number || 0;
+  if (v.type === 'formula' && v.formula?.type === 'number') return v.formula.number || 0;
+  return 0;
+}
+function getTitle(props, key) {
+  const v = props[key];
+  if (!v || v.type !== 'title') return '';
+  return (v.title || []).map(r => r.plain_text || r.text?.content || '').join('');
+}
+function getDate(props, key) {
+  const v = props[key];
+  if (!v || v.type !== 'date') return null;
+  return v.date?.start || null;
+}
 
 app.post('/api/options', checkAuth, async (req, res) => {
   if (!NOTION_TOKEN) return res.status(500).json({ error: 'NOTION_TOKEN not set' });
@@ -700,6 +805,11 @@ app.get('/favicon.ico', (req, res) => {
 
 // Static files
 app.use(express.static(path.join(__dirname)));
+// Service worker: servir con cache-control no-store para que se actualice
+app.get('/sw.js', (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  res.sendFile(path.join(__dirname, 'sw.js'));
+});
 
 // 404
 app.use((req, res) => res.status(404).json({ error: 'Not found' }));
