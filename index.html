@@ -1184,6 +1184,30 @@ input, select, textarea { font-family: inherit; }
     </div>
   </div>
 
+  <!-- ============ CUENTA DETALLE ============ -->
+  <div class="page" id="page-cuenta-detalle" data-page="cuenta-detalle">
+    <div class="page-header">
+      <div>
+        <button class="text-btn" data-go="cuentas" style="padding:0; margin-bottom:4px;">‹ Cuentas</button>
+        <h1 class="page-title" id="cuentaDetalleName">—</h1>
+      </div>
+      <button class="text-btn" data-action="add-movimiento" data-preset-cuenta="">+ Movimiento</button>
+    </div>
+    <div class="balance-hero" id="cuentaDetalleBalance"></div>
+    <div class="filter-bar">
+      <button class="filter-chip active" data-filter-mes="all">Todos</button>
+      <button class="filter-chip" data-filter-mes="0">Este mes</button>
+      <button class="filter-chip" data-filter-mes="-1">Mes anterior</button>
+      <button class="filter-chip" data-filter-mes="-2">Hace 2 meses</button>
+    </div>
+    <div class="section">
+      <div class="section-title" id="cuentaMovsTitle">Movimientos</div>
+      <div class="list" id="cuentaDetalleMovs">
+        <div class="empty">Cargando…</div>
+      </div>
+    </div>
+  </div>
+
   <!-- ============ CALENDARIO ============ -->
   <div class="page" id="page-calendario" data-page="calendario">
     <div class="page-header">
@@ -1937,6 +1961,7 @@ function goToPage(pageId) {
   if (pageId === 'cuentas') renderCuentasCompleto();
   if (pageId === 'movimientos') loadMovimientos();
   if (pageId === 'calendario') renderCalendario();
+  if (pageId === 'cuenta-detalle') renderCuentaDetalle();
 }
 
 document.addEventListener('click', (e) => {
@@ -2273,9 +2298,10 @@ function renderAccountCard(name, bal) {
   const isTC = name.startsWith('TC ');
   const isCred = !isTC && (name.includes('Tarjeta') || name.includes('TC'));
   const cardClass = isTC ? 'tc' : isCred ? 'credit' : '';
+  const icon = getAccountIcon(name);
   return `
-    <div class="account-card ${cardClass}">
-      <div class="account-name"><span class="account-icon">${getAccountIcon(name)}</span>${escapeHtml(name)}</div>
+    <div class="account-card ${cardClass}" data-cuenta-nombre="${escapeHtml(name)}" data-cuenta-balance="${bal}" data-cuenta-icon="${icon}">
+      <div class="account-name"><span class="account-icon">${icon}</span>${escapeHtml(name)}</div>
       <div class="account-balance ${bal < 0 ? 'negative' : 'positive'}">${fmt(bal)}</div>
     </div>
   `;
@@ -2914,6 +2940,107 @@ document.getElementById('calcSimVisaBtn').addEventListener('click', async () => 
 
 /* ---------- REFRESH ---------- */
 document.getElementById('refreshBtn').addEventListener('click', () => cargarTodo());
+
+/* ---------- DETALLE DE CUENTA ---------- */
+let CURRENT_CUENTA = null;
+let CURRENT_CUENTA_FILTER = 'all';
+
+function openCuentaDetalle(cuenta) {
+  CURRENT_CUENTA = cuenta;
+  CURRENT_CUENTA_FILTER = 'all';
+  goToPage('cuenta-detalle');
+}
+
+function renderCuentaDetalle() {
+  if (!CURRENT_CUENTA) return;
+  document.getElementById('cuentaDetalleName').innerText = CURRENT_CUENTA.name;
+  document.getElementById('cuentaDetalleBalance').innerHTML =
+    '<div class="balance-eyebrow">Saldo actual</div>' +
+    '<div class="balance-amount">' + fmt(CURRENT_CUENTA.balance) + '</div>' +
+    '<div class="balance-eyebrow">' + (CURRENT_CUENTA.icon || '') + ' ' + escapeHtml(CURRENT_CUENTA.name) + '</div>';
+  const addBtn = document.querySelector('[data-action="add-movimiento"][data-preset-cuenta]');
+  if (addBtn) addBtn.dataset.presetCuenta = CURRENT_CUENTA.name;
+  document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+  document.querySelector('.filter-chip[data-filter-mes="all"]').classList.add('active');
+  renderCuentaMovs();
+}
+
+function renderCuentaMovs() {
+  if (!CURRENT_CUENTA) return;
+  const cont = document.getElementById('cuentaDetalleMovs');
+  const titleEl = document.getElementById('cuentaMovsTitle');
+  let movs = ALL_DATA.movimientos.filter(m => props(m.properties, 'Cuenta', '') === CURRENT_CUENTA.name);
+  const now = new Date();
+  let titleText = 'Todos los movimientos';
+  if (CURRENT_CUENTA_FILTER !== 'all') {
+    const offset = Number(CURRENT_CUENTA_FILTER);
+    const targetMonth = new Date(now.getFullYear(), now.getMonth() + offset, 1);
+    const targetYear = targetMonth.getFullYear();
+    const targetMo = targetMonth.getMonth();
+    movs = movs.filter(m => {
+      const fecha = props(m.properties, 'Fecha', '');
+      if (!fecha) return false;
+      const d = new Date(fecha);
+      return d.getFullYear() === targetYear && d.getMonth() === targetMo;
+    });
+    const mesLabel = targetMonth.toLocaleDateString('es-GT', { month: 'long', year: 'numeric' });
+    titleText = mesLabel.charAt(0).toUpperCase() + mesLabel.slice(1);
+  }
+  titleEl.innerText = titleText + ' · ' + movs.length;
+  if (movs.length === 0) {
+    cont.innerHTML = '<div class="empty">Sin movimientos en este período</div>';
+    return;
+  }
+  movs.sort((a, b) => {
+    const fa = props(a.properties, 'Fecha', '');
+    const fb = props(b.properties, 'Fecha', '');
+    return new Date(fb) - new Date(fa);
+  });
+  cont.innerHTML = movs.slice(0, 100).map(m => {
+    const nombre = props(m.properties, 'Nombre', '?');
+    const tipo = props(m.properties, 'Tipo', '?');
+    const cat = props(m.properties, 'Categoria', '');
+    const monto = props(m.properties, 'Monto', 0);
+    const fecha = props(m.properties, 'Fecha', '');
+    const nota = props(m.properties, 'Nota', '');
+    const moneda = props(m.properties, 'Moneda', 'GTQ');
+    const sym = moneda === 'USD' ? '$' : 'Q';
+    const t = tipo.toLowerCase();
+    const isExpense = t.includes('gasto') || t.includes('pago') || t.includes('compra') || t.includes('transf') || t.includes('retiro');
+    const isIncome = t.includes('ingreso') || t.includes('sueldo') || t.includes('deposito');
+    let sign = '';
+    if (isExpense && !isIncome) sign = '-';
+    else if (isIncome) sign = '+';
+    let cls = 'mov';
+    if (isIncome) cls += ' income';
+    else if (isExpense) cls += ' expense';
+    return '<div class="list-item">' +
+      '<div class="list-icon">' + (isIncome ? '↑' : '↓') + '</div>' +
+      '<div class="list-info"><div class="list-title">' + escapeHtml(nombre) + '</div>' +
+      '<div class="list-meta">' + escapeHtml(fecha) + (cat ? ' · ' + escapeHtml(cat) : '') + '</div></div>' +
+      '<div class="list-amount ' + (isIncome ? 'income' : 'expense') + '">' + sign + sym + Math.abs(monto).toFixed(2) + '</div></div>';
+  }).join('');
+}
+
+document.addEventListener('click', function(e) {
+  const chip = e.target.closest('.filter-chip');
+  if (chip) {
+    document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+    chip.classList.add('active');
+    CURRENT_CUENTA_FILTER = chip.dataset.filterMes;
+    renderCuentaMovs();
+  }
+});
+
+document.addEventListener('click', function(e) {
+  const cuentaItem = e.target.closest('[data-cuenta-nombre]');
+  if (cuentaItem && !e.target.closest('button')) {
+    const name = cuentaItem.dataset.cuentaNombre;
+    const balance = Number(cuentaItem.dataset.cuentaBalance || 0);
+    const icon = cuentaItem.dataset.cuentaIcon || '';
+    openCuentaDetalle({ name: name, balance: balance, icon: icon });
+  }
+});
 
 /* ---------- CALENDARIO DE PAGOS ---------- */
 let CAL_MONTH = new Date().getMonth();
