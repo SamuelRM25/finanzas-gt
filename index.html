@@ -438,11 +438,17 @@ input, select, textarea { font-family: inherit; }
 }
 .account-card.tc {
   border-left: 2px solid var(--coral);
+  padding-bottom: 8px;
 }
 .account-card.credit {
   border-left: 2px solid var(--gold);
 }
 .account-card:hover { transform: translateY(-2px); border-color: var(--border-strong); }
+.tc-details { margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--border-1); font-size: 11px; }
+.tc-row { display: flex; justify-content: space-between; padding: 2px 0; color: var(--text-2); }
+.tc-row span:last-child { font-family: var(--font-mono); color: var(--text-1); }
+.tc-actions { display: flex; gap: 12px; margin-top: 6px; }
+.tc-actions .text-btn { font-size: 10px; padding: 2px 0; }
 
 /* ---------- CALENDARIO ---------- */
 .cal-summary { padding: 12px 20px; }
@@ -1126,11 +1132,17 @@ input, select, textarea { font-family: inherit; }
         <div class="page-eyebrow">Balances</div>
         <h1 class="page-title">Cuentas</h1>
       </div>
+      <button class="text-btn" data-action="add-tarjeta">+ Tarjeta</button>
     </div>
     <div class="section">
+      <div class="section-title">Cuentas y efectivo</div>
       <div class="accounts-grid" id="cuentasAllGrid">
         <div class="empty">Cargando…</div>
       </div>
+    </div>
+    <div class="section" id="tarjetasSection" style="display:none;">
+      <div class="section-title">Tarjetas de crédito</div>
+      <div class="accounts-grid" id="tarjetasGrid"></div>
     </div>
   </div>
 
@@ -1511,6 +1523,61 @@ input, select, textarea { font-family: inherit; }
     </div>
   </div>
 
+  <!-- ============ MODAL: TARJETA DE CRÉDITO ============ -->
+  <div class="modal-overlay" id="tarjetaModal">
+    <div class="modal">
+      <div class="modal-grabber"></div>
+      <div class="modal-header">
+        <div class="modal-title" id="tarjetaModalTitle">Nueva tarjeta</div>
+        <button class="modal-close" data-close="tarjetaModal">✕</button>
+      </div>
+      <input type="hidden" id="tarjetaId">
+      <div class="form-field">
+        <label class="form-label">Nombre *</label>
+        <input type="text" class="input" id="tarjetaNombre" placeholder="Ej. TC BAC Credomatic">
+      </div>
+      <div class="form-field">
+        <label class="form-label">Banco</label>
+        <input type="text" class="input" id="tarjetaBanco" placeholder="Ej. BAC Credomatic">
+      </div>
+      <div class="form-field">
+        <label class="form-label">Saldo actual (Q) *</label>
+        <input type="number" step="0.01" class="input" id="tarjetaSaldo" placeholder="0.00">
+      </div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+        <div class="form-field">
+          <label class="form-label">Fecha de pago</label>
+          <input type="date" class="input" id="tarjetaFechaPago">
+        </div>
+        <div class="form-field">
+          <label class="form-label">Fecha de corte</label>
+          <input type="date" class="input" id="tarjetaFechaCorte">
+        </div>
+      </div>
+      <div class="form-field">
+        <label class="form-label">Notas</label>
+        <input type="text" class="input" id="tarjetaNotas" placeholder="Opcional">
+      </div>
+      <div class="form-actions" style="margin-top: 16px;">
+        <button class="btn-secondary" data-action="delete-tarjeta" style="display:none; background: var(--coral-dim); color: var(--coral);">Eliminar</button>
+        <button class="btn-secondary" data-close="tarjetaModal">Cancelar</button>
+        <button class="btn-primary" data-action="save-tarjeta">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ MODAL: VISACUOTAS DE TC ============ -->
+  <div class="modal-overlay" id="tcVisacuotasModal">
+    <div class="modal">
+      <div class="modal-grabber"></div>
+      <div class="modal-header">
+        <div class="modal-title" id="tcVisacuotasTitle">Visacuotas</div>
+        <button class="modal-close" data-close="tcVisacuotasModal">✕</button>
+      </div>
+      <div class="list" id="tcVisacuotasList"></div>
+    </div>
+  </div>
+
   <!-- ============ MODAL: OCR RECIBO ============ -->
   <div class="modal-overlay" id="ocrModal">
     <div class="modal">
@@ -1645,9 +1712,9 @@ input, select, textarea { font-family: inherit; }
       <button type="button" class="submit-btn" id="calcVisacuotaBtn" style="background: var(--gold); color: #1c1303;">⚡ Calcular</button>
       <div class="calc-result hidden" id="calcVisacuotaResult"></div>
       <div class="form-field">
-        <label class="form-label">Tarjeta de crédito (opcional)</label>
+        <label class="form-label">Tarjeta de crédito *</label>
         <select class="select" id="visTarjeta">
-          <option value="">Sin tarjeta / contado</option>
+          <option value="">Seleccionar tarjeta...</option>
         </select>
       </div>
       <div class="form-field">
@@ -1820,7 +1887,7 @@ const escapeHtml = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&l
 
 /* ---------- STATE ---------- */
 let ALL_OPTIONS = {}; // { dbId: { field: [options] } }
-let ALL_DATA = { movimientos: [], presupuestos: [], metas: [], prestamos: [], visacuotas: [] };
+let ALL_DATA = { movimientos: [], presupuestos: [], metas: [], prestamos: [], visacuotas: [], tarjetas: [] };
 let SETTINGS = { exchangeRate: 7.8, rememberSession: true };
 
 /* ---------- AUTH ---------- */
@@ -2065,8 +2132,12 @@ async function loadOptions() {
     renderSelect('categoriaSelect', getOptions('Categoria'));
     renderSelect('tipoSelect', getOptions('Tipo'));
     renderSelect('presConcepto', getOptions('Categoria'));
-    renderSelect('visTarjeta', getOptions('Cuenta'));
     renderSelect('ocrCuenta', getOptions('Cuenta'));
+    if (ALL_DATA.tarjetas && ALL_DATA.tarjetas.length) {
+      renderSelect('visTarjeta', ALL_DATA.tarjetas.map(t => t.name));
+    } else {
+      renderSelect('visTarjeta', []);
+    }
   } catch (e) {
     showToast('Error cargando opciones: ' + e.message, 'error');
   }
@@ -2119,6 +2190,50 @@ document.getElementById('saveOptionBtn').addEventListener('click', async () => {
     showToast('✓ Opción agregada', 'success');
   } catch (e) {
     showToast('Error: ' + e.message, 'error');
+  }
+});
+
+/* ---------- SAVE TARJETA ---------- */
+document.addEventListener('click', async (e) => {
+  const saveTarjeta = e.target.closest('[data-action="save-tarjeta"]');
+  if (saveTarjeta) {
+    const id = document.getElementById('tarjetaId').value;
+    const name = document.getElementById('tarjetaNombre').value.trim();
+    const banco = document.getElementById('tarjetaBanco').value.trim();
+    const saldoActual = Number(document.getElementById('tarjetaSaldo').value) || 0;
+    const fechaPago = document.getElementById('tarjetaFechaPago').value || null;
+    const fechaCorte = document.getElementById('tarjetaFechaCorte').value || null;
+    const notas = document.getElementById('tarjetaNotas').value.trim();
+    if (!name) { showToast('Ingresa un nombre', 'error'); return; }
+    try {
+      if (id) {
+        await api('/api/tarjetas/' + id, {
+          method: 'PATCH',
+          body: JSON.stringify({ name, banco, saldoActual, fechaPago, fechaCorte, notas }),
+        });
+      } else {
+        await api('/api/tarjetas', {
+          method: 'POST',
+          body: JSON.stringify({ name, banco, saldoActual, fechaPago, fechaCorte, notas }),
+        });
+      }
+      closeModal('tarjetaModal');
+      showToast('✓ Tarjeta guardada', 'success');
+      await cargarTodo();
+    } catch (e) { showToast('Error: ' + e.message, 'error'); }
+  }
+
+  const delTarjeta = e.target.closest('[data-action="delete-tarjeta"]');
+  if (delTarjeta) {
+    const id = document.getElementById('tarjetaId').value;
+    if (!id) return;
+    if (!confirm('¿Eliminar esta tarjeta? Las visacuotas asociadas NO se eliminarán pero quedarán sin TC asignada.')) return;
+    try {
+      await api('/api/tarjetas/' + id, { method: 'DELETE' });
+      closeModal('tarjetaModal');
+      showToast('✓ Tarjeta eliminada', 'success');
+      await cargarTodo();
+    } catch (e) { showToast('Error: ' + e.message, 'error'); }
   }
 });
 
@@ -2194,7 +2309,61 @@ document.addEventListener('click', (e) => {
     ['visNombre', 'visEstablecimiento', 'visMonto', 'visCuotas', 'visTasa', 'visNotas'].forEach(id => document.getElementById(id).value = '');
     document.getElementById('visFecha').value = todayISO();
     document.getElementById('calcVisacuotaResult').classList.add('hidden');
+    if (ALL_DATA.tarjetas && ALL_DATA.tarjetas.length) {
+      renderSelect('visTarjeta', ALL_DATA.tarjetas.map(t => t.name));
+    }
     openModal('visacuotaModal');
+  }
+  if (action === 'add-tarjeta') {
+    document.getElementById('tarjetaId').value = '';
+    document.getElementById('tarjetaNombre').value = '';
+    document.getElementById('tarjetaBanco').value = '';
+    document.getElementById('tarjetaSaldo').value = '';
+    document.getElementById('tarjetaFechaPago').value = '';
+    document.getElementById('tarjetaFechaCorte').value = '';
+    document.getElementById('tarjetaNotas').value = '';
+    document.getElementById('tarjetaModalTitle').innerText = 'Nueva tarjeta';
+    document.querySelector('[data-action="delete-tarjeta"]').style.display = 'none';
+    openModal('tarjetaModal');
+  }
+  if (action === 'edit-tarjeta') {
+    const id = e.target.closest('[data-tarjeta-id]').dataset.tarjetaId;
+    const t = (ALL_DATA.tarjetas || []).find(x => x.id === id);
+    if (!t) return;
+    document.getElementById('tarjetaId').value = t.id;
+    document.getElementById('tarjetaNombre').value = t.name;
+    document.getElementById('tarjetaBanco').value = t.banco || '';
+    document.getElementById('tarjetaSaldo').value = t.saldoActual || 0;
+    document.getElementById('tarjetaFechaPago').value = t.fechaPago || '';
+    document.getElementById('tarjetaFechaCorte').value = t.fechaCorte || '';
+    document.getElementById('tarjetaNotas').value = t.notas || '';
+    document.getElementById('tarjetaModalTitle').innerText = 'Editar ' + t.name;
+    document.querySelector('[data-action="delete-tarjeta"]').style.display = '';
+    openModal('tarjetaModal');
+  }
+  if (action === 'view-tc-detail') {
+    const tarjeta = e.target.closest('[data-tarjeta-name]').dataset.tarjetaName;
+    document.getElementById('tcVisacuotasTitle').innerText = 'Visacuotas: ' + tarjeta;
+    const vis = ALL_DATA.visacuotas.filter(v => props(v.properties, 'Tarjeta', '') === tarjeta);
+    const cont = document.getElementById('tcVisacuotasList');
+    if (vis.length === 0) {
+      cont.innerHTML = '<div class="empty">Sin visacuotas en esta tarjeta</div>';
+    } else {
+      cont.innerHTML = vis.map(v => {
+        const nombre = props(v.properties, 'Nombre', '?');
+        const pag = props(v.properties, 'Cuotas pagadas', 0);
+        const total = props(v.properties, 'Cuotas totales', 0);
+        const cuota = props(v.properties, 'Cuota mensual', 0);
+        const saldo = props(v.properties, 'Saldo pendiente', 0);
+        const estado = props(v.properties, 'Estado', '?');
+        return '<div class="list-item">' +
+          '<div class="list-icon">🛍️</div>' +
+          '<div class="list-info"><div class="list-title">' + escapeHtml(nombre) + '</div>' +
+          '<div class="list-meta">Cuota ' + pag + '/' + total + ' · ' + estado + '</div></div>' +
+          '<div class="list-amount expense">' + fmt(saldo) + '</div></div>';
+      }).join('');
+    }
+    openModal('tcVisacuotasModal');
   }
   if (action === 'open-simulador') {
     openModal('simuladorModal');
@@ -2268,6 +2437,7 @@ async function cargarTodo() {
     loadMetas().catch(e => console.error(e)),
     loadPrestamos().catch(e => console.error(e)),
     loadVisacuotas().catch(e => console.error(e)),
+    loadTarjetas().catch(e => console.error(e)),
   ]);
   actualizarStats();
   renderDashboardExtras();
@@ -2302,6 +2472,17 @@ async function loadVisacuotas() {
   const res = await api('/api/visacuotas');
   ALL_DATA.visacuotas = res.results || [];
   renderVisacuotas();
+}
+
+async function loadTarjetas() {
+  try {
+    const res = await api('/api/tarjetas');
+    ALL_DATA.tarjetas = res.results || [];
+    // Actualizar select de TC en formularios
+    if (document.getElementById('visTarjetaSelect')) {
+      renderSelect('visTarjetaSelect', ALL_DATA.tarjetas.map(t => t.name));
+    }
+  } catch (e) { console.error('Error cargando tarjetas:', e.message); }
 }
 
 function props(p, key, def) {
@@ -2375,10 +2556,68 @@ function renderCuentasCompleto() {
     const signo = props(m.properties, 'Signo', 0);
     if (cuenta) porCuenta[cuenta] = (porCuenta[cuenta] || 0) + signo;
   }
-  const entries = Object.entries(porCuenta).sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]));
+
+  // Nombres de TCs para excluirlas de la lista de cuentas
+  const tcNombres = new Set((ALL_DATA.tarjetas || []).map(t => t.name));
+
+  // Filtrar TCs fuera de las cuentas normales
+  const entries = Object.entries(porCuenta)
+    .filter(([name]) => !tcNombres.has(name))
+    .sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]));
+
   const grid = document.getElementById('cuentasAllGrid');
-  if (entries.length === 0) { grid.innerHTML = '<div class="empty">Sin datos este mes</div>'; return; }
-  grid.innerHTML = entries.map(([name, bal]) => renderAccountCard(name, bal)).join('');
+  if (entries.length === 0) {
+    grid.innerHTML = '<div class="empty">Sin datos este mes</div>';
+  } else {
+    grid.innerHTML = entries.map(([name, bal]) => renderAccountCard(name, bal)).join('');
+  }
+
+  // Renderizar TCs con saldo dinámico
+  renderTarjetas();
+}
+
+function renderTarjetas() {
+  const section = document.getElementById('tarjetasSection');
+  const grid = document.getElementById('tarjetasGrid');
+  if (!section || !grid) return;
+  const tarjetas = ALL_DATA.tarjetas || [];
+  if (tarjetas.length === 0) {
+    section.style.display = 'none';
+    return;
+  }
+  section.style.display = '';
+
+  // Calcular saldo pendiente de visacuotas por TC
+  const deudaPorTc = {};
+  for (const v of ALL_DATA.visacuotas) {
+    const tarjeta = props(v.properties, 'Tarjeta', '');
+    const estado = props(v.properties, 'Estado', '');
+    if (!tarjeta) continue;
+    if (estado === 'Pagada') continue;
+    const saldo = props(v.properties, 'Saldo pendiente', 0);
+    deudaPorTc[tarjeta] = (deudaPorTc[tarjeta] || 0) + saldo;
+  }
+
+  grid.innerHTML = tarjetas.map(function(t) {
+    const deuda = deudaPorTc[t.name] || 0;
+    const disponible = t.saldoActual - deuda;
+    const fechaPago = t.fechaPago ? new Date(t.fechaPago + 'T00:00:00').toLocaleDateString('es-GT', { day: 'numeric', month: 'short' }) : '—';
+    const fechaCorte = t.fechaCorte ? new Date(t.fechaCorte + 'T00:00:00').toLocaleDateString('es-GT', { day: 'numeric', month: 'short' }) : '—';
+    return '<div class="account-card tc" data-tarjeta-id="' + t.id + '" data-tarjeta-name="' + escapeHtml(t.name) + '">' +
+      '<div class="account-name"><span class="account-icon">💳</span>' + escapeHtml(t.name) + '</div>' +
+      '<div class="account-balance ' + (disponible < 0 ? 'negative' : 'positive') + '">' + fmt(disponible) + '</div>' +
+      '<div class="tc-details">' +
+        '<div class="tc-row"><span>Saldo actual</span><span>' + fmt(t.saldoActual) + '</span></div>' +
+        '<div class="tc-row"><span>En visacuotas</span><span>' + fmt(deuda) + '</span></div>' +
+        '<div class="tc-row"><span>Fecha pago</span><span>' + fechaPago + '</span></div>' +
+        '<div class="tc-row"><span>Fecha corte</span><span>' + fechaCorte + '</span></div>' +
+      '</div>' +
+      '<div class="tc-actions">' +
+        '<button class="text-btn" data-action="edit-tarjeta" data-tarjeta-id="' + t.id + '">Editar</button>' +
+        '<button class="text-btn" data-action="view-tc-detail" data-tarjeta-name="' + escapeHtml(t.name) + '">Ver visacuotas</button>' +
+      '</div>' +
+    '</div>';
+  }).join('');
 }
 
 function getAccountIcon(name) {
@@ -2598,12 +2837,13 @@ function renderVisacuotas() {
     const pag = props(v.properties, 'Cuotas pagadas', 0);
     const cuota = props(v.properties, 'Cuota mensual', 0);
     const saldo = props(v.properties, 'Saldo pendiente', 0);
+    const tarjeta = props(v.properties, 'Tarjeta', '');
     const restantes = total - pag;
     return `<div class="list-item" data-action="view-visacuota" data-id="${v.id}">
       <div class="list-icon visa">🛍️</div>
       <div class="list-info">
         <div class="list-title">${escapeHtml(name)}</div>
-        <div class="list-meta">${restantes}/${total} · ${fmt(cuota)}/mes · ${fmt(saldo)} restante</div>
+        <div class="list-meta">${tarjeta ? escapeHtml(tarjeta) + ' · ' : ''}${restantes}/${total} · ${fmt(cuota)}/mes · ${fmt(saldo)} restante</div>
         <div class="progress-bar"><div class="progress-fill" style="width: ${total > 0 ? (pag/total*100) : 0}%"></div></div>
       </div>
       ${restantes > 0 ? `<button class="text-btn" data-action="pay-cuota" data-id="${v.id}" data-tipo="visacuota">Pagar</button>` : ''}
@@ -2908,6 +3148,7 @@ document.getElementById('saveVisacuota').addEventListener('click', async () => {
   const tarjeta = document.getElementById('visTarjeta').value;
   const notas = document.getElementById('visNotas').value;
   if (!nombre || !montoTotal || !cuotasTotales) { showToast('Completa nombre, monto y cuotas', 'error'); return; }
+  if (!tarjeta) { showToast('Selecciona una tarjeta de crédito', 'error'); return; }
   try {
     await api('/api/visacuotas', { method: 'POST', body: JSON.stringify({
       nombre, establecimiento, montoTotal, cuotasTotales, tasaMensual, fechaCompra, tarjeta, notas,
@@ -3139,27 +3380,46 @@ function getUpcomingPayments() {
     }
   }
 
-  // Visacuotas
+  // Visacuotas: agrupar por TC, mostrar fecha_pago de la TC
+  const tcByName = {};
+  for (const t of (ALL_DATA.tarjetas || [])) tcByName[t.name] = t;
+  const porTc = {};
   for (const v of ALL_DATA.visacuotas) {
     const vp = v.properties;
     const pag = props(vp, 'Cuotas pagadas', 0);
     const total = props(vp, 'Cuotas totales', 0);
     if (pag >= total) continue;
     const cuota = props(vp, 'Cuota mensual', 0);
-    const nombre = props(vp, 'Nombre', '?');
-    const fechaCompra = props(vp, 'Fecha compra', null);
-    if (!fechaCompra) continue;
-    const inicioDate = new Date(fechaCompra);
-    for (let m = pag; m < total; m++) {
-      let payDate = new Date(inicioDate.getFullYear(), inicioDate.getMonth() + m, inicioDate.getDate());
-      if (payDate.getMonth() === month && payDate.getFullYear() === year) {
-        const daysUntil = Math.ceil((payDate - now) / 86400000);
-        pagos.push({
-          date: payDate, name: nombre + ' (cuota ' + (m + 1) + '/' + total + ')',
-          type: 'visacuota', monto: cuota, itemId: v.id, daysUntil: daysUntil,
-          isToday: daysUntil === 0, isPast: daysUntil < 0
-        });
-      }
+    const tarjeta = props(vp, 'Tarjeta', '');
+    if (!tarjeta) continue; // sin TC asignada, no se puede calcular fecha
+    if (!porTc[tarjeta]) porTc[tarjeta] = { monto: 0, count: 0 };
+    porTc[tarjeta].monto += cuota;
+    porTc[tarjeta].count += 1;
+  }
+  for (const [tcName, grupo] of Object.entries(porTc)) {
+    const tc = tcByName[tcName];
+    if (!tc || !tc.fechaPago) continue;
+    // Construir la fecha de pago del mes actual (year/month) usando el día de tc.fechaPago
+    const day = new Date(tc.fechaPago + 'T00:00:00').getDate();
+    let payDate = new Date(year, month, day);
+    if (payDate.getMonth() !== month) {
+      // día no existe en este mes (ej. 31 en febrero), usar último día
+      payDate = new Date(year, month + 1, 0);
+    }
+    if (payDate.getMonth() === month && payDate.getFullYear() === year) {
+      const daysUntil = Math.ceil((payDate - now) / 86400000);
+      pagos.push({
+        date: payDate,
+        name: tcName + ' (' + grupo.count + ' visacuotas)',
+        type: 'tarjeta',
+        monto: grupo.monto,
+        itemId: 'tc:' + tcName,
+        daysUntil: daysUntil,
+        isToday: daysUntil === 0,
+        isPast: daysUntil < 0,
+        tarjeta: tc,
+        visacuotasCount: grupo.count,
+      });
     }
   }
 
@@ -3269,7 +3529,9 @@ function renderProximasCuotas() {
     return;
   }
   cont.innerHTML = proximos.map(function(p) {
-    const icon = p.type === 'prestamo' ? '🏦' : '🛍️';
+    let icon = '🛍️';
+    if (p.type === 'prestamo') icon = '🏦';
+    else if (p.type === 'tarjeta') icon = '💳';
     const urgency = p.isToday ? '🔥 HOY' : 'en ' + p.daysUntil + 'd';
     const dateLabel = p.date.toLocaleDateString('es-GT', { day: 'numeric', month: 'short' });
     return '<div class="cuota-mini' + (p.isToday ? ' urgent' : '') + '">' +
