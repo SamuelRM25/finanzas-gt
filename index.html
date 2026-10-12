@@ -406,6 +406,20 @@ input, select, textarea { font-family: inherit; }
 }
 .text-btn:hover { color: var(--jade-bright); }
 
+.form-actions { display: flex; gap: 12px; justify-content: flex-end; }
+.btn-primary {
+  flex: 1; padding: 12px 20px; border-radius: 10px; border: none; cursor: pointer;
+  background: var(--jade); color: #052e16; font-weight: 600; font-size: 14px;
+  transition: all 0.2s;
+}
+.btn-primary:hover { background: var(--jade-bright); transform: translateY(-1px); }
+.btn-secondary {
+  padding: 12px 20px; border-radius: 10px; border: 1px solid var(--border);
+  cursor: pointer; background: var(--bg-input); color: var(--text-primary);
+  font-weight: 500; font-size: 14px; transition: all 0.2s;
+}
+.btn-secondary:hover { background: var(--bg-card); }
+
 /* ============================================
    ACCOUNTS GRID
    ============================================ */
@@ -1299,6 +1313,13 @@ input, select, textarea { font-family: inherit; }
             <div class="list-meta">Cuotas, vencimientos</div>
           </div>
         </button>
+        <button class="list-item" data-action="open-ocr" style="width:100%; text-align:left; background:none;">
+          <div class="list-icon" style="background: rgba(34, 197, 94, 0.15); color: #22c55e;">📷</div>
+          <div class="list-info">
+            <div class="list-title">Escanear recibo</div>
+            <div class="list-meta">OCR con foto</div>
+          </div>
+        </button>
         <button class="list-item" data-action="open-simulador" style="width:100%; text-align:left; background:none;">
           <div class="list-icon" style="background: var(--jade-glow); color: var(--jade-bright);">⌥</div>
           <div class="list-info">
@@ -1487,6 +1508,45 @@ input, select, textarea { font-family: inherit; }
         <button class="modal-close" data-close="detailModal">✕</button>
       </div>
       <div id="detailModalBody"></div>
+    </div>
+  </div>
+
+  <!-- ============ MODAL: OCR RECIBO ============ -->
+  <div class="modal-overlay" id="ocrModal">
+    <div class="modal">
+      <div class="modal-grabber"></div>
+      <div class="modal-header">
+        <div class="modal-title">Escanear recibo</div>
+        <button class="modal-close" data-close="ocrModal">✕</button>
+      </div>
+      <div class="form-field">
+        <label class="form-label">Foto del recibo</label>
+        <input type="file" accept="image/*" capture="environment" id="ocrFileInput" class="input" style="padding: 8px;">
+        <div id="ocrImagePreview" style="margin-top: 8px;"></div>
+        <div id="ocrProgress" style="margin-top: 8px; font-size: 13px; color: var(--jade-bright);"></div>
+      </div>
+      <div id="ocrResult" class="hidden">
+        <div class="form-field">
+          <label class="form-label">Monto detectado</label>
+          <input type="number" step="0.01" class="input" id="ocrMonto" placeholder="0.00">
+        </div>
+        <div class="form-field">
+          <label class="form-label">Establecimiento</label>
+          <input type="text" class="input" id="ocrEstablecimiento" placeholder="Nombre del comercio">
+        </div>
+        <div class="form-field">
+          <label class="form-label">Cuenta</label>
+          <select class="select" id="ocrCuenta"><option value="">Cargando...</option></select>
+        </div>
+        <details style="margin-top: 8px;">
+          <summary style="cursor:pointer; font-size:13px; color:var(--text-secondary);">Ver texto detectado</summary>
+          <pre id="ocrRawText" style="margin-top:8px; padding:8px; background:var(--bg-input); border-radius:6px; font-size:11px; max-height:200px; overflow:auto; white-space:pre-wrap;"></pre>
+        </details>
+        <div class="form-actions" style="margin-top: 16px;">
+          <button class="btn-secondary" data-close="ocrModal">Cancelar</button>
+          <button class="btn-primary" data-action="save-ocr">Guardar movimiento</button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -2006,6 +2066,7 @@ async function loadOptions() {
     renderSelect('tipoSelect', getOptions('Tipo'));
     renderSelect('presConcepto', getOptions('Categoria'));
     renderSelect('visTarjeta', getOptions('Cuenta'));
+    renderSelect('ocrCuenta', getOptions('Cuenta'));
   } catch (e) {
     showToast('Error cargando opciones: ' + e.message, 'error');
   }
@@ -3233,8 +3294,196 @@ document.getElementById('calNextMonth').addEventListener('click', function() {
 });
 
 /* ---------- NAVEGACIÓN A CALENDARIO ---------- */
-// Agregar botón de calendario al modal "Más"
-// (se agrega en el HTML)
+
+/* ---------- SERVICE WORKER (#35) ---------- */
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js').then(function(reg) {
+    console.log('✓ Service Worker registrado');
+  }).catch(function(err) {
+    console.log('Service Worker no disponible:', err.message);
+  });
+}
+
+/* ---------- NOTIFICACIONES PUSH (#18) ---------- */
+const NOTIF_KEY = 'mifinanza_notified';
+
+function checkUpcomingNotifications() {
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+  const pagos = getUpcomingPayments();
+  const today = new Date().toISOString().split('T')[0];
+  const notified = JSON.parse(localStorage.getItem(NOTIF_KEY) || '{}');
+  notified[today] = notified[today] || [];
+  for (const p of pagos) {
+    if (p.daysUntil < 0 || p.daysUntil > 3) continue;
+    const key = p.itemId + ':' + p.name;
+    if (notified[today].includes(key)) continue;
+    const icon = p.type === 'prestamo' ? '🏦' : '🛍️';
+    const urgency = p.daysUntil === 0 ? 'HOY' : (p.daysUntil === 1 ? 'MAÑANA' : 'en ' + p.daysUntil + ' días');
+    const title = icon + ' Cuota ' + urgency;
+    const body = p.name + ' — ' + fmt(p.monto);
+    try {
+      const notif = new Notification(title, {
+        body: body,
+        icon: '/favicon.ico',
+        badge: '/favicon.ico',
+        tag: 'cuota-' + p.itemId,
+        requireInteraction: p.daysUntil <= 1,
+      });
+      notif.onclick = function() {
+        window.focus();
+        notif.close();
+        goToPage('calendario');
+      };
+    } catch (e) { console.log('Notif error:', e.message); }
+    notified[today].push(key);
+  }
+  for (const k of Object.keys(notified)) {
+    if (k !== today) delete notified[k];
+  }
+  localStorage.setItem(NOTIF_KEY, JSON.stringify(notified));
+}
+
+async function requestNotifPermission() {
+  if (!('Notification' in window)) return false;
+  if (Notification.permission === 'granted') return true;
+  if (Notification.permission === 'denied') return false;
+  const result = await Notification.requestPermission();
+  return result === 'granted';
+}
+
+/* ---------- OCR DE RECIBOS (#29) ---------- */
+let OCR_WORKER = null;
+
+async function initOCR() {
+  if (OCR_WORKER) return OCR_WORKER;
+  if (typeof Tesseract === 'undefined') {
+    await new Promise(function(resolve, reject) {
+      const s = document.createElement('script');
+      s.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
+      s.onload = resolve;
+      s.onerror = reject;
+      document.head.appendChild(s);
+    });
+  }
+  OCR_WORKER = await Tesseract.createWorker('spa', 1, {
+    logger: function(m) {
+      if (m.status === 'recognizing text') {
+        const pct = Math.round(m.progress * 100);
+        const el = document.getElementById('ocrProgress');
+        if (el) el.innerText = pct + '%';
+      }
+    },
+  });
+  return OCR_WORKER;
+}
+
+function parseReciboText(text) {
+  const lineas = text.split('\n').map(function(l) { return l.trim(); }).filter(Boolean);
+  let monto = null;
+  let establecimiento = null;
+  let fecha = null;
+
+  const montoRegexes = [
+    /total[:\s]+(?:Q|\$|GTQ|USD)?\s*([\d,]+\.\d{2})/i,
+    /(?:Q|\$|GTQ|USD)\s*([\d,]+\.\d{2})/,
+    /([\d,]+\.\d{2})/,
+  ];
+  for (const re of montoRegexes) {
+    const m = text.match(re);
+    if (m) {
+      monto = parseFloat(m[1].replace(/,/g, ''));
+      if (monto > 0 && monto < 100000) break;
+      monto = null;
+    }
+  }
+
+  for (const l of lineas) {
+    if (l.length > 3 && l.length < 40 && !/^\d/.test(l) && !/^[\d\s.,$Q-]+$/.test(l)) {
+      establecimiento = l;
+      break;
+    }
+  }
+
+  const fechaRegexes = [
+    /(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/,
+    /(\d{1,2}\s+de\s+\w+\s+de\s+\d{4})/i,
+  ];
+  for (const re of fechaRegexes) {
+    const m = text.match(re);
+    if (m) { fecha = m[1]; break; }
+  }
+
+  return { monto: monto, establecimiento: establecimiento, fecha: fecha };
+}
+
+async function handleReciboImage(file) {
+  const worker = await initOCR();
+  const result = await worker.recognize(file);
+  const text = result.data.text;
+  const parsed = parseReciboText(text);
+  return { text: text, monto: parsed.monto, establecimiento: parsed.establecimiento, fecha: parsed.fecha };
+}
+
+function openOCRModal() {
+  openModal('ocrModal');
+  document.getElementById('ocrResult').classList.add('hidden');
+  document.getElementById('ocrImagePreview').innerHTML = '';
+  document.getElementById('ocrProgress').innerText = '';
+  document.getElementById('ocrRawText').innerText = '';
+  document.getElementById('ocrFileInput').value = '';
+  document.getElementById('ocrMonto').value = '';
+  document.getElementById('ocrEstablecimiento').value = '';
+}
+
+document.addEventListener('change', async function(e) {
+  if (e.target.id === 'ocrFileInput') {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(ev) {
+      document.getElementById('ocrImagePreview').innerHTML = '<img src="' + ev.target.result + '" style="max-width:100%; max-height:300px; border-radius:8px;">';
+    };
+    reader.readAsDataURL(file);
+    document.getElementById('ocrResult').classList.remove('hidden');
+    document.getElementById('ocrProgress').innerText = '0%';
+    try {
+      const result = await handleReciboImage(file);
+      document.getElementById('ocrProgress').innerText = '✓';
+      document.getElementById('ocrRawText').innerText = result.text;
+      if (result.monto) document.getElementById('ocrMonto').value = result.monto.toFixed(2);
+      if (result.establecimiento) document.getElementById('ocrEstablecimiento').value = result.establecimiento;
+    } catch (e) {
+      showToast('Error OCR: ' + e.message, 'error');
+      document.getElementById('ocrProgress').innerText = '✗';
+    }
+  }
+});
+
+document.addEventListener('click', async function(e) {
+  if (e.target.closest('[data-action="open-ocr"]')) {
+    await openOCRModal();
+  }
+  if (e.target.closest('[data-action="save-ocr"]')) {
+    const monto = document.getElementById('ocrMonto').value;
+    const establecimiento = document.getElementById('ocrEstablecimiento').value;
+    if (!monto) { showToast('Ingresa un monto', 'error'); return; }
+    try {
+      await api('/api/movements', {
+        method: 'POST',
+        body: JSON.stringify({
+          tipo: 'Gasto diario',
+          cuenta: document.getElementById('ocrCuenta').value,
+          monto: Number(monto),
+          categoria: 'Otros',
+          nota: 'Recibo escaneado: ' + establecimiento,
+        }),
+      });
+      showToast('✓ Recibo guardado como movimiento', 'success');
+      closeModal('ocrModal');
+      await cargarTodo();
+    } catch (e) { showToast('Error: ' + e.message, 'error'); }
+  }
+});
 
 /* ---------- INIT ---------- */
 async function init() {
@@ -3242,6 +3491,26 @@ async function init() {
   setMovimientoType('expense');
   await cargarTodo();
   setInterval(cargarTodo, 60000);
+  setInterval(checkUpcomingNotifications, 5 * 60 * 1000);
+  setTimeout(function() {
+    if (Notification && Notification.permission === 'default') {
+      const btn = document.createElement('button');
+      btn.innerHTML = '🔔 Activar recordatorios de pagos';
+      btn.style.cssText = 'position:fixed; bottom:80px; left:50%; transform:translateX(-50%); z-index:999; padding:10px 18px; background:var(--jade-dim); color:var(--jade-bright); border:1px solid var(--jade); border-radius:999px; font-size:13px; font-weight:600; cursor:pointer; box-shadow:0 4px 20px rgba(0,0,0,0.3);';
+      btn.onclick = async function() {
+        const ok = await requestNotifPermission();
+        if (ok) {
+          showToast('✓ Recordatorios activados', 'success');
+          checkUpcomingNotifications();
+        } else {
+          showToast('Permiso denegado', 'error');
+        }
+        btn.remove();
+      };
+      document.body.appendChild(btn);
+      setTimeout(function() { btn.remove(); }, 15000);
+    }
+  }, 3000);
 }
 </script>
 </body>
