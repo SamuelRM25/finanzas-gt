@@ -607,9 +607,13 @@ input, select, textarea { font-family: inherit; }
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 14px 0;
+  padding: 14px;
   border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: background 0.15s ease;
+  border-radius: var(--radius-md);
 }
+.list-item[data-action] { cursor: pointer; }
 .list-item:last-child { border-bottom: none; }
 .list-item:hover { background: rgba(255,255,255,0.02); }
 .list-icon {
@@ -760,6 +764,13 @@ input, select, textarea { font-family: inherit; }
   margin-bottom: 20px;
 }
 .modal-title { font-family: var(--font-display); font-size: 24px; font-weight: 400; }
+.detail-grid { display: flex; flex-direction: column; gap: 10px; margin-top: 4px; }
+.detail-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; background: var(--bg-2); border-radius: var(--radius-md); border: 1px solid var(--border-1); }
+.detail-row.full { flex-direction: column; align-items: flex-start; gap: 4px; }
+.detail-label { font-size: 12px; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 500; }
+.detail-value { font-size: 15px; color: var(--text-1); font-weight: 500; text-align: right; font-variant-numeric: tabular-nums; }
+.detail-row.full .detail-value { text-align: left; line-height: 1.5; }
+.badge { display: inline-block; padding: 3px 10px; border-radius: 999px; background: var(--jade-dim); color: var(--jade); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
 .modal-close {
   width: 32px; height: 32px;
   border-radius: 50%;
@@ -1351,6 +1362,18 @@ input, select, textarea { font-family: inherit; }
         <input type="text" class="input" id="metaNotas" placeholder="Opcional">
       </div>
       <button type="button" class="submit-btn income" id="saveMeta">+ Guardar meta</button>
+    </div>
+  </div>
+
+  <!-- ============ MODAL: DETAIL VIEW ============ -->
+  <div class="modal-overlay" id="detailModal">
+    <div class="modal">
+      <div class="modal-grabber"></div>
+      <div class="modal-header">
+        <div class="modal-title" id="detailModalTitle">Detalle</div>
+        <button class="modal-close" data-close="detailModal">✕</button>
+      </div>
+      <div id="detailModalBody"></div>
     </div>
   </div>
 
@@ -2373,7 +2396,7 @@ function renderPrestamos() {
     const cuota = props(p.properties, 'Cuota mensual', 0);
     const totalPagar = props(p.properties, 'Total a pagar', 0);
     const restantes = total - pag;
-    return `<div class="list-item">
+    return `<div class="list-item" data-action="view-prestamo" data-id="${p.id}">
       <div class="list-icon loan">🏦</div>
       <div class="list-info">
         <div class="list-title">${escapeHtml(name)}</div>
@@ -2398,7 +2421,7 @@ function renderVisacuotas() {
     const cuota = props(v.properties, 'Cuota mensual', 0);
     const saldo = props(v.properties, 'Saldo pendiente', 0);
     const restantes = total - pag;
-    return `<div class="list-item">
+    return `<div class="list-item" data-action="view-visacuota" data-id="${v.id}">
       <div class="list-icon visa">🛍️</div>
       <div class="list-info">
         <div class="list-title">${escapeHtml(name)}</div>
@@ -2450,6 +2473,87 @@ document.addEventListener('click', async (e) => {
       showToast(`✓ Q${m.toFixed(2)} agregado a "${nombre}"`, 'success');
       await cargarTodo();
     } catch (e) { showToast('Error: ' + e.message, 'error'); }
+  }
+
+  if (action === 'view-prestamo' || action === 'view-visacuota') {
+    const id = e.target.closest('[data-id]').dataset.id;
+    const tipo = action === 'view-prestamo' ? 'prestamo' : 'visacuota';
+    const all = tipo === 'prestamo' ? ALL_DATA.prestamos : ALL_DATA.visacuotas;
+    const item = all.find(x => x.id === id);
+    if (!item) return;
+    const p = item.properties;
+    const name = tipo === 'prestamo' ? props(p, 'Prestamo', '?') : props(p, 'Nombre', '?');
+    const total = props(p, 'Cuotas totales', 0);
+    const pag = props(p, 'Cuotas pagadas', 0);
+    const cuota = props(p, 'Cuota mensual', 0);
+    const restantes = total - pag;
+    const pct = total > 0 ? (pag / total * 100) : 0;
+    let html = '';
+    if (tipo === 'prestamo') {
+      const tipoPrestamo = props(p, 'Tipo', '?');
+      const contraparte = props(p, 'Contraparte', '—');
+      const tasa = props(p, 'Tasa de interes', 0);
+      const tipoTasa = props(p, 'Tipo tasa', 'Mensual');
+      const totalPagar = props(p, 'Total a pagar', 0);
+      const totalInteres = props(p, 'Total interes', 0);
+      const estado = props(p, 'Estado', '—');
+      const fechaInicio = props(p, 'Fecha inicio', null);
+      const fechaVencimiento = props(p, 'Fecha vencimiento', null);
+      const nota = props(p, 'Nota', '');
+      const saldo = totalPagar - (cuota * pag);
+      html = `
+        <div class="detail-grid">
+          <div class="detail-row"><span class="detail-label">Tipo</span><span class="detail-value">${escapeHtml(tipoPrestamo)}</span></div>
+          <div class="detail-row"><span class="detail-label">Contraparte</span><span class="detail-value">${escapeHtml(contraparte)}</span></div>
+          <div class="detail-row"><span class="detail-label">Tasa</span><span class="detail-value">${tasa}% ${tipoTasa.toLowerCase()}</span></div>
+          <div class="detail-row"><span class="detail-label">Monto total</span><span class="detail-value">${fmt(cuota * total)}</span></div>
+          <div class="detail-row"><span class="detail-label">Cuota mensual</span><span class="detail-value">${fmt(cuota)}</span></div>
+          <div class="detail-row"><span class="detail-label">Total a pagar</span><span class="detail-value">${fmt(totalPagar)}</span></div>
+          <div class="detail-row"><span class="detail-label">Total intereses</span><span class="detail-value">${fmt(totalInteres)}</span></div>
+          <div class="detail-row"><span class="detail-label">Cuotas</span><span class="detail-value">${pag} de ${total} (${restantes} restantes)</span></div>
+          <div class="detail-row"><span class="detail-label">Progreso</span><span class="detail-value">${pct.toFixed(1)}%</span></div>
+          <div class="detail-row"><span class="detail-label">Saldo restante</span><span class="detail-value">${fmt(Math.max(0, saldo))}</span></div>
+          ${fechaInicio ? `<div class="detail-row"><span class="detail-label">Fecha inicio</span><span class="detail-value">${fechaInicio}</span></div>` : ''}
+          ${fechaVencimiento ? `<div class="detail-row"><span class="detail-label">Vencimiento</span><span class="detail-value">${fechaVencimiento}</span></div>` : ''}
+          <div class="detail-row"><span class="detail-label">Estado</span><span class="detail-value"><span class="badge">${escapeHtml(estado)}</span></span></div>
+          ${nota ? `<div class="detail-row full"><span class="detail-label">Notas</span><span class="detail-value">${escapeHtml(nota)}</span></div>` : ''}
+        </div>
+        <div class="progress-bar" style="margin-top:16px;"><div class="progress-fill" style="width: ${pct}%"></div></div>
+      `;
+    } else {
+      const establecimiento = props(p, 'Establecimiento', '—');
+      const tarjeta = props(p, 'Tarjeta', '—');
+      const tipoCuota = props(p, 'Tipo cuota', '—');
+      const tasaMens = props(p, 'Tasa mensual', 0);
+      const tasaAnual = props(p, 'Tasa anual', 0);
+      const montoTotal = props(p, 'Monto total', 0);
+      const saldo = props(p, 'Saldo pendiente', 0);
+      const estado = props(p, 'Estado', '—');
+      const fechaCompra = props(p, 'Fecha compra', null);
+      const notas = props(p, 'Notas', '');
+      html = `
+        <div class="detail-grid">
+          <div class="detail-row"><span class="detail-label">Establecimiento</span><span class="detail-value">${escapeHtml(establecimiento)}</span></div>
+          <div class="detail-row"><span class="detail-label">Tarjeta</span><span class="detail-value">${escapeHtml(tarjeta)}</span></div>
+          <div class="detail-row"><span class="detail-label">Tipo</span><span class="detail-value">${escapeHtml(tipoCuota)}</span></div>
+          <div class="detail-row"><span class="detail-label">Tasa mensual</span><span class="detail-value">${(tasaMens * 100).toFixed(2)}%</span></div>
+          <div class="detail-row"><span class="detail-label">Tasa anual</span><span class="detail-value">${tasaAnual}%</span></div>
+          <div class="detail-row"><span class="detail-label">Monto total</span><span class="detail-value">${fmt(montoTotal)}</span></div>
+          <div class="detail-row"><span class="detail-label">Cuota mensual</span><span class="detail-value">${fmt(cuota)}</span></div>
+          <div class="detail-row"><span class="detail-label">Saldo pendiente</span><span class="detail-value">${fmt(saldo)}</span></div>
+          <div class="detail-row"><span class="detail-label">Cuotas</span><span class="detail-value">${pag} de ${total} (${restantes} restantes)</span></div>
+          <div class="detail-row"><span class="detail-label">Progreso</span><span class="detail-value">${pct.toFixed(1)}%</span></div>
+          ${fechaCompra ? `<div class="detail-row"><span class="detail-label">Fecha compra</span><span class="detail-value">${fechaCompra}</span></div>` : ''}
+          <div class="detail-row"><span class="detail-label">Estado</span><span class="detail-value"><span class="badge">${escapeHtml(estado)}</span></span></div>
+          ${notas ? `<div class="detail-row full"><span class="detail-label">Notas</span><span class="detail-value">${escapeHtml(notas)}</span></div>` : ''}
+        </div>
+        <div class="progress-bar" style="margin-top:16px;"><div class="progress-fill" style="width: ${pct}%"></div></div>
+      `;
+    }
+    document.getElementById('detailModalTitle').innerText = name;
+    document.getElementById('detailModalBody').innerHTML = html;
+    openModal('detailModal');
+    return;
   }
 
   if (action === 'pay-cuota') {
