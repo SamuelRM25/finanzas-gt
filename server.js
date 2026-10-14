@@ -523,21 +523,36 @@ app.post('/api/metas', checkAuth, async (req, res) => {
 app.patch('/api/metas/:id', checkAuth, async (req, res) => {
   try {
     const { id } = req.params;
-    const { estado, montoObjetivo, fechaObjetivo, estrategia, cuotaSugerida, notas } = req.body || {};
+    const { estado, montoObjetivo, fechaObjetivo, estrategia, cuotaSugerida, notas, ahorrado, aporte } = req.body || {};
     const props = {};
     if (estado !== undefined) props.Estado = { select: { name: estado } };
     if (montoObjetivo !== undefined) props['Monto objetivo'] = { number: Number(montoObjetivo) };
-    if (fechaObjetivo !== undefined) props['Fecha objetivo'] = { date: { start: fechaObjetivo } };
+    if (fechaObjetivo !== undefined) props['Fecha objetivo'] = fechaObjetivo ? { date: { start: fechaObjetivo } } : { date: null };
     if (estrategia !== undefined) props.Estrategia = { select: { name: estrategia } };
     if (cuotaSugerida !== undefined) props['Cuota sugerida'] = { number: Number(cuotaSugerida) };
     if (notas !== undefined) props.Notas = { rich_text: [{ text: { content: notas } }] };
+    if (ahorrado !== undefined) props.Ahorrado = { number: Number(ahorrado) };
+    // aporte: amount to add to current Ahorrado
+    if (aporte !== undefined) {
+      const current = await getMetaAhorrado(id);
+      props.Ahorrado = { number: current + Number(aporte) };
+    }
 
     const page = await updatePage(id, props);
-    res.json({ ok: true, id: page.id });
+    res.json({ ok: true, id: page.id, nuevoAhorrado: props.Ahorrado?.number });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
 });
+
+async function getMetaAhorrado(id) {
+  try {
+    const r = await notionFetch(`/pages/${id}`);
+    if (!r.ok) return 0;
+    const p = await r.json();
+    return p.properties?.Ahorrado?.number || 0;
+  } catch { return 0; }
+}
 
 // ============================================
 // PRESTAMOS
@@ -712,6 +727,7 @@ async function loadTarjetas() {
       fechaPago: p.properties?.['Fecha pago']?.date?.start || null,
       fechaCorte: p.properties?.['Fecha corte']?.date?.start || null,
       saldoActual: p.properties?.['Saldo actual']?.number || 0,
+      limite: p.properties?.['Límite de crédito']?.number || 0,
       notas: p.properties?.Notas?.rich_text?.[0]?.plain_text || '',
     }));
   } catch (e) { return []; }
@@ -728,7 +744,7 @@ app.get('/api/tarjetas', checkAuth, async (req, res) => {
 
 app.post('/api/tarjetas', checkAuth, async (req, res) => {
   try {
-    const { name, banco, fechaPago, fechaCorte, saldoActual, notas } = req.body || {};
+    const { name, banco, fechaPago, fechaCorte, saldoActual, limite, notas } = req.body || {};
     if (!name) return res.status(400).json({ error: 'name requerido' });
     const props = {
       Name: { title: [{ text: { content: name } }] },
@@ -736,6 +752,7 @@ app.post('/api/tarjetas', checkAuth, async (req, res) => {
       'Fecha pago': fechaPago ? { date: { start: fechaPago } } : undefined,
       'Fecha corte': fechaCorte ? { date: { start: fechaCorte } } : undefined,
       'Saldo actual': { number: Number(saldoActual) || 0 },
+      'Límite de crédito': { number: Number(limite) || 0 },
       Notas: notas ? { rich_text: [{ text: { content: notas } }] } : undefined,
     };
     const r = await notionFetch('/pages', {
@@ -759,13 +776,14 @@ app.post('/api/tarjetas', checkAuth, async (req, res) => {
 app.patch('/api/tarjetas/:id', checkAuth, async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, banco, fechaPago, fechaCorte, saldoActual, notas } = req.body || {};
+    const { name, banco, fechaPago, fechaCorte, saldoActual, limite, notas } = req.body || {};
     const props = {};
     if (name !== undefined) props.Name = { title: [{ text: { content: name } }] };
     if (banco !== undefined) props.Banco = { rich_text: [{ text: { content: banco } }] };
     if (fechaPago !== undefined) props['Fecha pago'] = fechaPago ? { date: { start: fechaPago } } : { date: null };
     if (fechaCorte !== undefined) props['Fecha corte'] = fechaCorte ? { date: { start: fechaCorte } } : { date: null };
     if (saldoActual !== undefined) props['Saldo actual'] = { number: Number(saldoActual) || 0 };
+    if (limite !== undefined) props['Límite de crédito'] = { number: Number(limite) || 0 };
     if (notas !== undefined) props.Notas = { rich_text: [{ text: { content: notas } }] };
     await updatePage(id, props);
     res.json({ ok: true });
@@ -783,6 +801,99 @@ app.delete('/api/tarjetas/:id', checkAuth, async (req, res) => {
       throw new Error(`Notion ${r.status}: ${text}`);
     }
     res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ============================================
+// BACKUP (#39)
+// ============================================
+app.get('/api/backup/export', checkAuth, async (req, res) => {
+  if (!NOTION_TOKEN) return res.status(500).json({ error: 'NOTION_TOKEN not set' });
+  try {
+    const data = {
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      databases: {},
+    };
+    // Exportar todas las DBs
+    const dbs = [
+      ['movimientos', IDS.dataSourceMov],
+      ['presupuestos', IDS.dataSourcePres],
+      ['metas', IDS.dataSourceMetas],
+      ['prestamos', IDS.dataSourcePrest],
+      ['visacuotas', IDS.dataSourceVisa],
+      ['tarjetas', IDS.dataSourceTarjetas],
+    ];
+    for (const [name, dsId] of dbs) {
+      try {
+        const r = await queryDatabase(dsId, {}, [], 200);
+        data.databases[name] = r.results || [];
+      } catch (e) {
+        data.databases[name] = { error: e.message };
+      }
+    }
+    const fileName = 'mifinanza-backup-' + new Date().toISOString().split('T')[0] + '.json';
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Disposition', 'attachment; filename="' + fileName + '"');
+    res.json(data);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post('/api/backup/import', checkAuth, async (req, res) => {
+  if (!NOTION_TOKEN) return res.status(500).json({ error: 'NOTION_TOKEN not set' });
+  try {
+    const { data, dryRun } = req.body || {};
+    if (!data || !data.databases) return res.status(400).json({ error: 'data.databases requerido' });
+    let created = 0, errors = 0;
+    // Solo importamos presupuestos y metas (los movimientos/visacuotas/prestamos/tarjetas son más complejos de duplicar)
+    if (data.databases.presupuestos && Array.isArray(data.databases.presupuestos)) {
+      for (const item of data.databases.presupuestos) {
+        try {
+          const props = item.properties || {};
+          const concepto = props.Concepto?.title?.[0]?.text?.content || props.Concepto?.title?.[0]?.plain_text || 'Sin nombre';
+          if (dryRun) { created++; continue; }
+          await createPage(IDS.presupuestos, {
+            Concepto: { title: [{ text: { content: concepto } }] },
+            Limite: { number: props.Limite?.number || 0 },
+            Estado: props.Estado ? { select: { name: props.Estado.select?.name || 'Pendiente' } } : undefined,
+            Fecha: props.Fecha?.date ? { date: { start: props.Fecha.date.start } } : undefined,
+            Notas: props.Notas?.rich_text?.[0] ? { rich_text: [{ text: { content: props.Notas.rich_text[0].plain_text || '' } }] } : undefined,
+          });
+          created++;
+        } catch (e) { errors++; }
+      }
+    }
+    res.json({ ok: true, created, errors, message: dryRun ? 'Dry run' : (created + ' presupuestos importados, ' + errors + ' errores') });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post('/api/backup/auto', async (req, res) => {
+  // Endpoint para que un servicio externo (cron-job.org, etc.) llame cada semana
+  // Requiere header Authorization con APP_PASSWORD
+  const auth = req.headers['authorization'];
+  if (auth !== 'Bearer ' + (process.env.APP_PASSWORD || '')) {
+    return res.status(401).json({ error: 'No autorizado' });
+  }
+  try {
+    // Por ahora solo logueamos - en el futuro podría enviar a Drive/Dropbox/S3
+    const r = await fetch(`http://localhost:${PORT}/api/backup/export`, {
+      headers: { 'Authorization': 'Bearer ' + (process.env.APP_PASSWORD || '') },
+    });
+    const data = await r.json();
+    const fileName = 'mifinanza-auto-backup-' + new Date().toISOString().split('T')[0] + '.json';
+    // Enviar por Telegram si está configurado
+    if (process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_CHAT_ID) {
+      const summary = '<b>Backup automático semanal</b>\n\n' +
+        Object.keys(data.databases || {}).map(k => '• ' + k + ': ' + (Array.isArray(data.databases[k]) ? data.databases[k].length : 0)).join('\n');
+      await sendTelegramMessage(summary);
+    }
+    res.json({ ok: true, fileName, message: 'Backup automático realizado' });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }

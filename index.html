@@ -504,6 +504,11 @@ input, select, textarea { font-family: inherit; }
 .account-card:hover { transform: translateY(-2px); border-color: var(--border-strong); }
 .tc-details { margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--border-1); font-size: 11px; }
 .tc-row { display: flex; justify-content: space-between; padding: 2px 0; color: var(--text-2); }
+.tc-balance-label { font-size: 10px; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.06em; margin-top: 2px; }
+.tc-limit-bar { height: 4px; background: var(--bg-input); border-radius: 999px; overflow: hidden; margin: 6px 0 4px; }
+.tc-limit-fill { height: 100%; background: linear-gradient(90deg, var(--jade), var(--jade-bright)); transition: width 0.4s; }
+.tc-limit-fill.warning { background: linear-gradient(90deg, var(--gold), #f59e0b); }
+.tc-limit-fill.danger { background: linear-gradient(90deg, var(--coral), var(--coral-bright)); }
 .tc-row span:last-child { font-family: var(--font-mono); color: var(--text-1); }
 .tc-actions { display: flex; gap: 12px; margin-top: 6px; }
 .tc-actions .text-btn { font-size: 10px; padding: 2px 0; }
@@ -1700,6 +1705,48 @@ mark.search-highlight { background: rgba(251, 191, 36, 0.3); color: var(--text-1
     </div>
   </div>
 
+  <!-- ============ MODAL: PAGAR PRESUPUESTO ============ -->
+  <div class="modal-overlay" id="pagarPresupuestoModal">
+    <div class="modal">
+      <div class="modal-grabber"></div>
+      <div class="modal-header">
+        <div class="modal-title">Pagar presupuesto</div>
+        <button class="modal-close" data-close="pagarPresupuestoModal">X</button>
+      </div>
+      <input type="hidden" id="pagarPresId">
+      <div style="text-align: center; padding: 8px 0 16px;">
+        <div style="font-size: 12px; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.05em;">Concepto</div>
+        <div id="pagarPresConcepto" style="font-family: var(--font-display); font-size: 22px; margin-top: 4px;">—</div>
+        <div id="pagarPresLimite" style="font-family: var(--font-mono); font-size: 14px; color: var(--text-2); margin-top: 4px;">—</div>
+      </div>
+      <div class="form-field">
+        <label class="form-label">Monto a pagar (Q)</label>
+        <input type="number" class="input" id="pagarPresMonto" step="0.01" min="0" placeholder="0.00">
+      </div>
+      <div class="form-field">
+        <label class="form-label">¿De qué cuenta sale?</label>
+        <select class="select" id="pagarPresCuenta">
+          <option value="">Cargando...</option>
+        </select>
+      </div>
+      <div class="form-field" style="flex-direction: row; align-items: center; gap: 8px;">
+        <input type="checkbox" id="pagarPresMoraCheck" style="width: 18px; height: 18px;">
+        <label for="pagarPresMoraCheck" style="font-size: 13px; cursor: pointer;">Hubo mora / multa (pago tarde)</label>
+      </div>
+      <div class="form-field hidden" id="pagarPresMoraWrap">
+        <label class="form-label">Monto de mora (Q)</label>
+        <input type="number" class="input" id="pagarPresMora" step="0.01" min="0" placeholder="0.00">
+      </div>
+      <p style="font-size: 11px; color: var(--text-3); margin: 0 0 12px; line-height: 1.5;">
+        Se creará un movimiento de <b>gasto</b> en la cuenta seleccionada. Si agregas mora, se crea un movimiento adicional.
+      </p>
+      <div class="form-actions">
+        <button class="btn-secondary" data-close="pagarPresupuestoModal">Cancelar</button>
+        <button class="btn-primary" id="pagarPresSave">Confirmar pago</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ============ MODAL: ADD META ============ -->
   <div class="modal-overlay" id="metaModal">
     <div class="modal">
@@ -1744,6 +1791,61 @@ mark.search-highlight { background: rgba(251, 191, 36, 0.3); color: var(--text-1
     </div>
   </div>
 
+  <!-- ============ MODAL: APORTAR A META ============ -->
+  <div class="modal-overlay" id="aporteMetaModal">
+    <div class="modal">
+      <div class="modal-grabber"></div>
+      <div class="modal-header">
+        <div class="modal-title">Aportar a meta</div>
+        <button class="modal-close" data-close="aporteMetaModal">X</button>
+      </div>
+      <input type="hidden" id="aporteMetaId">
+      <div style="text-align: center; padding: 12px 0;">
+        <div style="font-size: 12px; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.05em;">Meta</div>
+        <div id="aporteMetaName" style="font-family: var(--font-display); font-size: 24px; margin-top: 4px;">—</div>
+        <div style="margin-top: 12px; display: flex; justify-content: center; gap: 24px;">
+          <div>
+            <div style="font-size: 11px; color: var(--text-3); text-transform: uppercase;">Ahorrado</div>
+            <div id="aporteMetaActual" style="font-family: var(--font-mono); font-size: 18px; color: var(--gold);">—</div>
+          </div>
+          <div>
+            <div style="font-size: 11px; color: var(--text-3); text-transform: uppercase;">Faltante</div>
+            <div id="aporteMetaFaltante" style="font-family: var(--font-mono); font-size: 18px; color: var(--text-2);">—</div>
+          </div>
+        </div>
+      </div>
+      <div class="form-field">
+        <label class="form-label">Monto a aportar (Q)</label>
+        <input type="number" class="input" id="aporteMetaMonto" step="0.01" min="0" placeholder="0.00">
+      </div>
+      <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+        <button type="button" class="text-btn aporte-quick" data-amt="50" style="flex:1; padding: 8px; background: var(--bg-input); border-radius: 6px;">Q50</button>
+        <button type="button" class="text-btn aporte-quick" data-amt="100" style="flex:1; padding: 8px; background: var(--bg-input); border-radius: 6px;">Q100</button>
+        <button type="button" class="text-btn aporte-quick" data-amt="500" style="flex:1; padding: 8px; background: var(--bg-input); border-radius: 6px;">Q500</button>
+        <button type="button" class="text-btn aporte-quick" data-amt="1000" style="flex:1; padding: 8px; background: var(--bg-input); border-radius: 6px;">Q1000</button>
+      </div>
+      <p style="font-size: 11px; color: var(--text-3); margin: 0 0 12px; line-height: 1.5;">
+        El aporte se suma al monto ahorrado de la meta. <b>No se registra como movimiento</b> en ninguna cuenta.
+      </p>
+      <div class="form-actions">
+        <button class="btn-secondary" data-close="aporteMetaModal">Cancelar</button>
+        <button class="btn-primary" id="aporteMetaSave">Aportar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ MODAL: DETALLE DE META ============ -->
+  <div class="modal-overlay" id="metaDetailModal">
+    <div class="modal">
+      <div class="modal-grabber"></div>
+      <div class="modal-header">
+        <div class="modal-title" id="metaDetailTitle">Meta</div>
+        <button class="modal-close" data-close="metaDetailModal">X</button>
+      </div>
+      <div id="metaDetailBody"></div>
+    </div>
+  </div>
+
   <!-- ============ MODAL: DETAIL VIEW ============ -->
   <div class="modal-overlay" id="detailModal">
     <div class="modal">
@@ -1774,8 +1876,13 @@ mark.search-highlight { background: rgba(251, 191, 36, 0.3); color: var(--text-1
         <input type="text" class="input" id="tarjetaBanco" placeholder="Ej. BAC Credomatic">
       </div>
       <div class="form-field">
-        <label class="form-label">Saldo actual (Q) *</label>
+        <label class="form-label">Saldo actual / Deuda total (Q) *</label>
         <input type="number" step="0.01" class="input" id="tarjetaSaldo" placeholder="0.00">
+      </div>
+      <div class="form-field">
+        <label class="form-label">Límite de crédito (Q)</label>
+        <input type="number" step="0.01" class="input" id="tarjetaLimite" placeholder="0.00">
+        <div style="font-size: 11px; color: var(--text-3); margin-top: 4px;">Si defines límite, verás también el saldo disponible (límite − deuda).</div>
       </div>
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
         <div class="form-field">
@@ -2073,6 +2180,29 @@ mark.search-highlight { background: rgba(251, 191, 36, 0.3); color: var(--text-1
       </p>
       <button type="button" class="submit-btn" style="background: var(--coral); color: #fff;" id="logoutBtn">Cerrar sesión</button>
 
+      <h3 style="margin: 24px 0 8px; font-family: var(--font-display); font-size: 18px;">Backup (#39)</h3>
+      <p style="color: var(--text-dim); font-size: 12px; margin-bottom: 8px;">
+        Descarga una copia de todos tus datos (movimientos, visacuotas, préstamos, metas, etc.) en formato JSON. Guárdalo en Google Drive, Dropbox o donde prefieras.
+      </p>
+      <div id="backupStatus" style="padding: 8px 12px; background: var(--bg-input); border-radius: 6px; margin-bottom: 8px; font-size: 11px; color: var(--text-3);">
+        Último backup: <span id="lastBackupDate">—</span>
+      </div>
+      <div style="display: flex; gap: 8px;">
+        <button type="button" class="submit-btn" style="background: var(--jade-dim); color: var(--jade-bright); border: 1px solid var(--jade); flex: 1;" id="downloadBackupBtn">Descargar backup</button>
+        <button type="button" class="submit-btn" style="background: var(--bg-3); color: var(--text-1); flex: 1;" id="uploadBackupBtn">Restaurar</button>
+        <input type="file" accept=".json" id="uploadBackupInput" style="display: none;">
+      </div>
+      <details style="margin-top: 8px;">
+        <summary style="cursor: pointer; font-size: 12px; color: var(--text-2); font-weight: 500;">Backup automático semanal</summary>
+        <div style="padding: 12px; background: var(--bg-input); border-radius: 8px; margin-top: 8px; font-size: 12px; line-height: 1.6;">
+          <p style="margin: 0 0 8px;">Configura un cron job externo para llamar a esta URL cada semana:</p>
+          <code style="display: block; padding: 8px; background: var(--bg-2); border-radius: 4px; word-break: break-all; font-size: 10px;">
+            POST /api/backup/auto<br>Authorization: Bearer &lt;APP_PASSWORD&gt;
+          </code>
+          <p style="margin: 8px 0 0; color: var(--text-3); font-size: 11px;">Recomendado: usa <a href="https://cron-job.org" target="_blank" style="color: var(--jade-bright);">cron-job.org</a> para llamar la URL cada lunes a las 8am.</p>
+        </div>
+      </details>
+
       <h3 style="margin: 24px 0 8px; font-family: var(--font-display); font-size: 18px;">Telegram (#40)</h3>
       <p style="color: var(--text-dim); font-size: 12px; margin-bottom: 8px;">
         Conecta un bot de Telegram para recibir notificaciones y registrar gastos por chat.
@@ -2250,6 +2380,59 @@ document.getElementById('saveSettingsBtn').addEventListener('click', () => {
   saveSettings();
   showToast('Ajustes guardados', 'success');
   closeModal('settingsModal');
+});
+
+/* ---------- BACKUP (#39) ---------- */
+function loadBackupStatus() {
+  const last = localStorage.getItem('mifinanza_last_backup');
+  document.getElementById('lastBackupDate').innerText = last ? new Date(last).toLocaleString('es-GT') : 'Nunca';
+}
+
+document.getElementById('downloadBackupBtn')?.addEventListener('click', async function() {
+  try {
+    const pwd = getPassword();
+    const r = await fetch('/api/backup/export', { headers: { 'Authorization': 'Bearer ' + pwd } });
+    if (!r.ok) throw new Error('Error al exportar');
+    const blob = await r.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'mifinanza-backup-' + new Date().toISOString().split('T')[0] + '.json';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    localStorage.setItem('mifinanza_last_backup', new Date().toISOString());
+    loadBackupStatus();
+    showToast('Backup descargado', 'success');
+  } catch (e) { showToast('Error: ' + e.message, 'error'); }
+});
+
+document.getElementById('uploadBackupBtn')?.addEventListener('click', function() {
+  document.getElementById('uploadBackupInput').click();
+});
+
+document.getElementById('uploadBackupInput')?.addEventListener('change', async function(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  if (!confirm('¿Restaurar presupuestos desde este backup? Los movimientos NO se duplican, solo se importan presupuestos como nuevos registros.')) return;
+  try {
+    const text = await file.text();
+    const data = JSON.parse(text);
+    const r = await api('/api/backup/import', {
+      method: 'POST',
+      body: JSON.stringify({ data }),
+    });
+    showToast(r.message || 'Restauración completada', 'success');
+    await cargarTodo();
+  } catch (e) { showToast('Error: ' + e.message, 'error'); }
+});
+
+// Cargar estado de backup al abrir settings
+document.addEventListener('click', function(e) {
+  if (e.target.closest('[data-action="open-settings"]')) {
+    setTimeout(loadBackupStatus, 100);
+  }
 });
 
 document.getElementById('logoutBtn').addEventListener('click', () => {
@@ -2538,6 +2721,7 @@ document.addEventListener('click', async (e) => {
     const name = document.getElementById('tarjetaNombre').value.trim();
     const banco = document.getElementById('tarjetaBanco').value.trim();
     const saldoActual = Number(document.getElementById('tarjetaSaldo').value) || 0;
+    const limite = Number(document.getElementById('tarjetaLimite').value) || 0;
     const fechaPago = document.getElementById('tarjetaFechaPago').value || null;
     const fechaCorte = document.getElementById('tarjetaFechaCorte').value || null;
     const notas = document.getElementById('tarjetaNotas').value.trim();
@@ -2546,12 +2730,12 @@ document.addEventListener('click', async (e) => {
       if (id) {
         await api('/api/tarjetas/' + id, {
           method: 'PATCH',
-          body: JSON.stringify({ name, banco, saldoActual, fechaPago, fechaCorte, notas }),
+          body: JSON.stringify({ name, banco, saldoActual, limite, fechaPago, fechaCorte, notas }),
         });
       } else {
         await api('/api/tarjetas', {
           method: 'POST',
-          body: JSON.stringify({ name, banco, saldoActual, fechaPago, fechaCorte, notas }),
+          body: JSON.stringify({ name, banco, saldoActual, limite, fechaPago, fechaCorte, notas }),
         });
       }
       closeModal('tarjetaModal');
@@ -2656,6 +2840,7 @@ document.addEventListener('click', (e) => {
     document.getElementById('tarjetaNombre').value = '';
     document.getElementById('tarjetaBanco').value = '';
     document.getElementById('tarjetaSaldo').value = '';
+    document.getElementById('tarjetaLimite').value = '';
     document.getElementById('tarjetaFechaPago').value = '';
     document.getElementById('tarjetaFechaCorte').value = '';
     document.getElementById('tarjetaNotas').value = '';
@@ -2671,6 +2856,7 @@ document.addEventListener('click', (e) => {
     document.getElementById('tarjetaNombre').value = t.name;
     document.getElementById('tarjetaBanco').value = t.banco || '';
     document.getElementById('tarjetaSaldo').value = t.saldoActual || 0;
+    document.getElementById('tarjetaLimite').value = t.limite || 0;
     document.getElementById('tarjetaFechaPago').value = t.fechaPago || '';
     document.getElementById('tarjetaFechaCorte').value = t.fechaCorte || '';
     document.getElementById('tarjetaNotas').value = t.notas || '';
@@ -2926,30 +3112,43 @@ function renderTarjetas() {
   }
   section.style.display = '';
 
-  // Calcular saldo pendiente de visacuotas por TC
+  // Suma de visacuotas pendientes por TC (parte de la deuda)
   const deudaPorTc = {};
   for (const v of ALL_DATA.visacuotas) {
     const tarjeta = props(v.properties, 'Tarjeta', '');
     const estado = props(v.properties, 'Estado', '');
-    if (!tarjeta) continue;
-    if (estado === 'Pagada') continue;
+    if (!tarjeta || estado === 'Pagada') continue;
     const saldo = props(v.properties, 'Saldo pendiente', 0);
     deudaPorTc[tarjeta] = (deudaPorTc[tarjeta] || 0) + saldo;
   }
 
   grid.innerHTML = tarjetas.map(function(t) {
     const deuda = deudaPorTc[t.name] || 0;
-    const disponible = t.saldoActual - deuda;
+    const tieneLimite = (t.limite || 0) > 0;
+    const disponible = tieneLimite ? (t.limite - t.saldoActual) : 0;
+    const utilizacion = tieneLimite ? (t.saldoActual / t.limite) * 100 : 0;
     const fechaPago = t.fechaPago ? new Date(t.fechaPago + 'T00:00:00').toLocaleDateString('es-GT', { day: 'numeric', month: 'short' }) : '—';
     const fechaCorte = t.fechaCorte ? new Date(t.fechaCorte + 'T00:00:00').toLocaleDateString('es-GT', { day: 'numeric', month: 'short' }) : '—';
+    const balanceClass = t.saldoActual > 0 ? 'negative' : 'positive';
+    const balanceLabel = tieneLimite ? 'Disponible' : 'Saldo actual';
+    const balanceValue = tieneLimite ? disponible : t.saldoActual;
+    let limitBar = '';
+    if (tieneLimite) {
+      const barColor = utilizacion > 80 ? 'danger' : (utilizacion > 30 ? 'warning' : '');
+      limitBar = '<div class="tc-limit-bar"><div class="tc-limit-fill ' + barColor + '" style="width: ' + Math.min(100, utilizacion).toFixed(0) + '%"></div></div>' +
+        '<div class="tc-row"><span>Utilización</span><span>' + utilizacion.toFixed(0) + '%</span></div>';
+    }
     return '<div class="account-card tc" data-tarjeta-id="' + t.id + '" data-tarjeta-name="' + escapeHtml(t.name) + '">' +
       '<div class="account-name"><span class="account-icon">C</span>' + escapeHtml(t.name) + '</div>' +
-      '<div class="account-balance ' + (disponible < 0 ? 'negative' : 'positive') + '">' + fmt(disponible) + '</div>' +
+      '<div class="account-balance ' + balanceClass + '">' + fmt(balanceValue) + '</div>' +
+      '<div class="tc-balance-label">' + balanceLabel + '</div>' +
       '<div class="tc-details">' +
-        '<div class="tc-row"><span>Saldo actual</span><span>' + fmt(t.saldoActual) + '</span></div>' +
-        '<div class="tc-row"><span>En visacuotas</span><span>' + fmt(deuda) + '</span></div>' +
+        (tieneLimite ? '<div class="tc-row"><span>Límite</span><span>' + fmt(t.limite) + '</span></div>' : '') +
+        '<div class="tc-row"><span>Saldo actual (deuda)</span><span>' + fmt(t.saldoActual) + '</span></div>' +
+        (deuda > 0 ? '<div class="tc-row"><span>En visacuotas</span><span>' + fmt(deuda) + '</span></div>' : '') +
         '<div class="tc-row"><span>Fecha pago</span><span>' + fechaPago + '</span></div>' +
         '<div class="tc-row"><span>Fecha corte</span><span>' + fechaCorte + '</span></div>' +
+        limitBar +
       '</div>' +
       '<div class="tc-actions">' +
         '<button class="text-btn" data-action="edit-tarjeta" data-tarjeta-id="' + t.id + '">Editar</button>' +
@@ -3003,7 +3202,7 @@ function renderDashboardExtras() {
       const obj = props(m.properties, 'Monto objetivo', 0);
       const saved = props(m.properties, 'Ahorrado', 0);
       const pct = obj > 0 ? Math.min(100, (saved / obj) * 100) : 0;
-      return `<div class="list-item">
+      return `<div class="list-item" data-action="view-meta" data-id="${m.id}" style="cursor: pointer;">
         <div class="list-icon goal">M</div>
         <div class="list-info">
           <div class="list-title">${escapeHtml(name)}</div>
@@ -3080,7 +3279,7 @@ function renderMovimientos() {
     const esPagoTC = tipo === 'Pago de tarjeta';
     const icon = esIngreso ? '↑' : esTransfer ? '↔' : esPagoTC ? 'C' : '↓';
     const iconClass = esIngreso ? 'income' : esTransfer ? 'transfer' : 'expense';
-    return `<div class="list-item">
+    return `<div class="list-item" data-action="view-movimiento" data-id="${m.id}" style="cursor: pointer;">
       <div class="list-icon ${iconClass}">${icon}</div>
       <div class="list-info">
         <div class="list-title">${escapeHtml(cat)}${nota ? ' · ' + escapeHtml(nota) : ''}</div>
@@ -3126,7 +3325,7 @@ function renderMetas() {
     const estado = props(m.properties, 'Estado', 'Activa');
     const estrategia = props(m.properties, 'Estrategia', '');
     const pct = obj > 0 ? Math.min(100, (saved / obj) * 100) : 0;
-    return `<div class="list-item">
+    return `<div class="list-item" data-action="view-meta" data-id="${m.id}" style="cursor: pointer;">
           <div class="list-icon goal">M</div>
       <div class="list-info">
         <div class="list-title">${escapeHtml(name)}</div>
@@ -3134,7 +3333,7 @@ function renderMetas() {
         <div class="progress-bar"><div class="progress-fill gold" style="width: ${pct}%"></div></div>
       </div>
       <div class="list-amount gold">${fmt(obj - saved)}</div>
-      <button class="text-btn" data-action="add-money-meta" data-id="${m.id}" data-nombre="${escapeHtml(name)}">+ Aportar</button>
+      <button class="text-btn" data-action="add-money-meta" data-id="${m.id}" data-nombre="${escapeHtml(name)}" onclick="event.stopPropagation()">+ Aportar</button>
     </div>`;
   }).join('');
 }
@@ -3197,39 +3396,113 @@ document.addEventListener('click', async (e) => {
 
   if (action === 'mark-presupuesto-paid') {
     const id = e.target.closest('[data-id]').dataset.id;
-    try {
-      await api(`/api/presupuestos/${id}`, {
-        method: 'PATCH',
-        body: JSON.stringify({ estado: 'Pagado', montoPagado: 0 }),
-      });
-      showToast('Marcado como pagado', 'success');
-      await loadPresupuestos();
-    } catch (e) { showToast('Error: ' + e.message, 'error'); }
+    const p = ALL_DATA.presupuestos.find(x => x.id === id);
+    if (!p) return;
+    const concepto = props(p.properties, 'Concepto', '?');
+    const limite = props(p.properties, 'Limite', 0);
+    document.getElementById('pagarPresId').value = id;
+    document.getElementById('pagarPresConcepto').innerText = concepto;
+    document.getElementById('pagarPresLimite').innerText = 'Límite: ' + fmt(limite);
+    document.getElementById('pagarPresMonto').value = limite;
+    // Cargar select de cuentas
+    if (document.getElementById('cuentaSelect')) {
+      renderSelect('pagarPresCuenta', getOptions('Cuenta'));
+    }
+    document.getElementById('pagarPresMoraCheck').checked = false;
+    document.getElementById('pagarPresMoraWrap').classList.add('hidden');
+    document.getElementById('pagarPresMora').value = '';
+    openModal('pagarPresupuestoModal');
   }
 
   if (action === 'add-money-meta') {
     const id = e.target.closest('[data-id]').dataset.id;
-    const nombre = e.target.closest('[data-nombre]')?.dataset.nombre || 'la meta';
-    const monto = prompt(`¿Cuánto quieres agregar a "${nombre}"? (Q)`);
-    if (!monto) return;
-    const m = Number(monto);
-    if (!m || m <= 0) { showToast('Monto inválido', 'error'); return; }
-    try {
-      // Usar el nombre de la meta como cuenta y categoria para tracking
-      await api('/api/movements', {
-        method: 'POST',
-        body: JSON.stringify({
-          tipo: 'Ingreso',
-          cuenta: nombre,
-          monto: m,
-          categoria: 'Ahorro',
-          metaId: id,
-          nota: `Aporte a meta "${nombre}"`,
-        }),
-      });
-      showToast(`OK Q${m.toFixed(2)} agregado a "${nombre}"`, 'success');
-      await cargarTodo();
-    } catch (e) { showToast('Error: ' + e.message, 'error'); }
+    const meta = ALL_DATA.metas.find(m => m.id === id);
+    if (!meta) return;
+    const nombre = props(meta.properties, 'Meta', 'Meta');
+    const ahorrado = props(meta.properties, 'Ahorrado', 0);
+    const objetivo = props(meta.properties, 'Monto objetivo', 0);
+    document.getElementById('aporteMetaId').value = id;
+    document.getElementById('aporteMetaName').innerText = nombre;
+    document.getElementById('aporteMetaActual').innerText = fmt(ahorrado);
+    document.getElementById('aporteMetaFaltante').innerText = fmt(Math.max(0, objetivo - ahorrado));
+    document.getElementById('aporteMetaMonto').value = '';
+    openModal('aporteMetaModal');
+    setTimeout(() => document.getElementById('aporteMetaMonto').focus(), 100);
+  }
+  if (action === 'view-meta') {
+    const id = e.target.closest('[data-id]').dataset.id;
+    const meta = ALL_DATA.metas.find(m => m.id === id);
+    if (!meta) return;
+    const nombre = props(meta.properties, 'Meta', 'Meta');
+    const objetivo = props(meta.properties, 'Monto objetivo', 0);
+    const ahorrado = props(meta.properties, 'Ahorrado', 0);
+    const fechaObj = props(meta.properties, 'Fecha objetivo', null);
+    const estrategia = props(meta.properties, 'Estrategia', '');
+    const cuotaSug = props(meta.properties, 'Cuota sugerida', 0);
+    const estado = props(meta.properties, 'Estado', 'Activa');
+    const notas = props(meta.properties, 'Notas', '');
+    const faltante = Math.max(0, objetivo - ahorrado);
+    const pct = objetivo > 0 ? Math.min(100, (ahorrado / objetivo) * 100) : 0;
+    document.getElementById('metaDetailTitle').innerText = nombre;
+    document.getElementById('metaDetailBody').innerHTML =
+      '<div class="meta-detail-hero">' +
+        '<div class="meta-detail-pct" style="font-family: var(--font-mono); font-size: 56px; font-weight: 700; text-align: center; color: var(--gold);">' + pct.toFixed(0) + '%</div>' +
+        '<div class="progress-bar" style="height: 10px; margin: 12px 0;"><div class="progress-fill gold" style="width: ' + pct + '%"></div></div>' +
+        '<div style="display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 14px; margin-bottom: 16px;">' +
+          '<span style="color: var(--text-2);">' + fmt(ahorrado) + '</span>' +
+          '<span style="color: var(--text-3);">de ' + fmt(objetivo) + '</span>' +
+        '</div>' +
+      '</div>' +
+      '<div class="detail-grid">' +
+        '<div class="detail-row"><span>Estado</span><strong>' + estado + '</strong></div>' +
+        '<div class="detail-row"><span>Ahorrado</span><strong style="color: var(--gold);">' + fmt(ahorrado) + '</strong></div>' +
+        '<div class="detail-row"><span>Objetivo</span><strong>' + fmt(objetivo) + '</strong></div>' +
+        '<div class="detail-row"><span>Faltante</span><strong>' + fmt(faltante) + '</strong></div>' +
+        (fechaObj ? '<div class="detail-row"><span>Fecha objetivo</span><strong>' + escapeHtml(fechaObj) + '</strong></div>' : '') +
+        (estrategia ? '<div class="detail-row"><span>Estrategia</span><strong>' + escapeHtml(estrategia) + '</strong></div>' : '') +
+        (cuotaSug ? '<div class="detail-row"><span>Cuota sugerida</span><strong>' + fmt(cuotaSug) + '/mes</strong></div>' : '') +
+        (notas ? '<div class="detail-row"><span>Notas</span><strong>' + escapeHtml(notas) + '</strong></div>' : '') +
+      '</div>' +
+      '<div class="form-actions" style="margin-top: 16px;">' +
+        '<button class="btn-secondary" data-action="add-money-meta" data-id="' + meta.id + '" data-nombre="' + escapeHtml(nombre) + '" data-close="metaDetailModal">+ Aportar</button>' +
+        '<button class="btn-primary" data-close="metaDetailModal">Cerrar</button>' +
+      '</div>';
+    openModal('metaDetailModal');
+  }
+
+  if (action === 'view-movimiento') {
+    const id = e.target.closest('[data-id]').dataset.id;
+    const m = ALL_DATA.movimientos.find(x => x.id === id);
+    if (!m) return;
+    const p = m.properties;
+    const nombre = props(p, 'Nombre', '?');
+    const tipo = props(p, 'Tipo', '?');
+    const categoria = props(p, 'Categoria', '—');
+    const cuenta = props(p, 'Cuenta', '—');
+    const monto = Math.abs(props(p, 'Monto', 0));
+    const fecha = props(p, 'Fecha', '—');
+    const nota = props(p, 'Nota', '');
+    const moneda = props(p, 'Moneda', 'GTQ');
+    const sym = moneda === 'USD' ? '$' : 'Q';
+    const signo = props(p, 'Signo', 0);
+    document.getElementById('detailModalTitle').innerText = nombre;
+    document.getElementById('detailModalBody').innerHTML =
+      '<div style="text-align: center; padding: 8px 0 20px;">' +
+        '<div style="font-family: var(--font-mono); font-size: 36px; font-weight: 700; color: ' + (signo > 0 ? 'var(--jade-bright)' : 'var(--coral-bright)') + ';">' +
+          (signo > 0 ? '+' : '-') + sym + monto.toFixed(2) +
+        '</div>' +
+        '<div style="font-size: 11px; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.06em; margin-top: 4px;">' +
+          (signo > 0 ? 'Ingreso' : 'Gasto') + (moneda !== 'GTQ' ? ' · ' + moneda : '') +
+        '</div>' +
+      '</div>' +
+      '<div class="detail-grid">' +
+        '<div class="detail-row"><span>Fecha</span><strong>' + escapeHtml(fecha) + '</strong></div>' +
+        '<div class="detail-row"><span>Tipo</span><strong>' + escapeHtml(tipo) + '</strong></div>' +
+        '<div class="detail-row"><span>Categoría</span><strong>' + escapeHtml(categoria) + '</strong></div>' +
+        '<div class="detail-row"><span>Cuenta</span><strong>' + escapeHtml(cuenta) + '</strong></div>' +
+        (nota ? '<div class="detail-row"><span>Nota</span><strong>' + escapeHtml(nota) + '</strong></div>' : '') +
+      '</div>';
+    openModal('detailModal');
   }
 
   if (action === 'view-prestamo' || action === 'view-visacuota') {
@@ -3355,18 +3628,72 @@ document.addEventListener('click', async (e) => {
 
 /* ---------- ADD PRESUPUESTO ---------- */
 document.getElementById('savePresupuesto').addEventListener('click', async () => {
-  const categoria = document.getElementById('presConcepto').value;
+  const concepto = document.getElementById('presConcepto').value;
   const limite = Number(document.getElementById('presLimite').value);
   const fecha = document.getElementById('presFecha').value;
   const notas = document.getElementById('presupuestoNotas').value;
-  if (!categoria || !limite) { showToast('Completa concepto y límite', 'error'); return; }
+  if (!concepto || !limite) { showToast('Completa concepto y límite', 'error'); return; }
   try {
     await api('/api/presupuestos', { method: 'POST', body: JSON.stringify({
-      categoria, limiteMensual: limite, fechaLimite: fecha || null, estado: 'Pendiente', notas,
+      concepto, limite, fecha: fecha || null, notas,
     })});
     closeModal('presupuestoModal');
     showToast('Presupuesto creado', 'success');
     await loadPresupuestos();
+  } catch (e) { showToast('Error: ' + e.message, 'error'); }
+});
+
+/* ---------- PAGAR PRESUPUESTO (con cuenta + mora) ---------- */
+document.addEventListener('change', function(e) {
+  if (e.target.id === 'pagarPresMoraCheck') {
+    document.getElementById('pagarPresMoraWrap').classList.toggle('hidden', !e.target.checked);
+  }
+});
+
+document.getElementById('pagarPresSave')?.addEventListener('click', async function() {
+  const id = document.getElementById('pagarPresId').value;
+  const monto = Number(document.getElementById('pagarPresMonto').value);
+  const cuenta = document.getElementById('pagarPresCuenta').value;
+  const moraOn = document.getElementById('pagarPresMoraCheck').checked;
+  const mora = moraOn ? Number(document.getElementById('pagarPresMora').value) || 0 : 0;
+  if (!id || !monto || monto <= 0) { showToast('Ingresa un monto válido', 'error'); return; }
+  if (!cuenta) { showToast('Selecciona una cuenta', 'error'); return; }
+  try {
+    // 1. Crear movimiento de gasto
+    await api('/api/movements', {
+      method: 'POST',
+      body: JSON.stringify({
+        tipo: 'Gasto diario',
+        cuenta: cuenta,
+        monto: monto,
+        categoria: 'Presupuesto',
+        presupuestoId: id,
+        nota: 'Pago de presupuesto',
+      }),
+    });
+    // 2. Si hay mora, crear otro movimiento
+    if (mora > 0) {
+      await api('/api/movements', {
+        method: 'POST',
+        body: JSON.stringify({
+          tipo: 'Gasto diario',
+          cuenta: cuenta,
+          monto: mora,
+          categoria: 'Mora',
+          presupuestoId: id,
+          nota: 'Mora / multa por pago tarde',
+        }),
+      });
+    }
+    // 3. Marcar presupuesto como pagado
+    await api(`/api/presupuestos/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ estado: 'Pagado' }),
+    });
+    closeModal('pagarPresupuestoModal');
+    const msg = mora > 0 ? `Pago de ${fmt(monto)} + mora de ${fmt(mora)} registrado` : `Pago de ${fmt(monto)} registrado`;
+    showToast(msg, 'success');
+    await cargarTodo();
   } catch (e) { showToast('Error: ' + e.message, 'error'); }
 });
 
@@ -3405,6 +3732,29 @@ document.getElementById('saveMeta').addEventListener('click', async () => {
     closeModal('metaModal');
     showToast('Meta creada', 'success');
     await loadMetas();
+  } catch (e) { showToast('Error: ' + e.message, 'error'); }
+});
+
+/* ---------- APORTAR A META ---------- */
+document.addEventListener('click', function(e) {
+  const quick = e.target.closest('.aporte-quick');
+  if (quick) {
+    document.getElementById('aporteMetaMonto').value = quick.dataset.amt;
+  }
+});
+
+document.getElementById('aporteMetaSave')?.addEventListener('click', async function() {
+  const id = document.getElementById('aporteMetaId').value;
+  const monto = Number(document.getElementById('aporteMetaMonto').value);
+  if (!id || !monto || monto <= 0) { showToast('Ingresa un monto válido', 'error'); return; }
+  try {
+    await api('/api/metas/' + id, {
+      method: 'PATCH',
+      body: JSON.stringify({ aporte: monto }),
+    });
+    closeModal('aporteMetaModal');
+    showToast('Aporte registrado: ' + fmt(monto), 'success');
+    await cargarTodo();
   } catch (e) { showToast('Error: ' + e.message, 'error'); }
 });
 
@@ -3656,7 +4006,7 @@ function renderCuentaMovs() {
     let cls = 'mov';
     if (isIncome) cls += ' income';
     else if (isExpense) cls += ' expense';
-    return '<div class="list-item">' +
+    return '<div class="list-item" data-action="view-movimiento" data-id="' + m.id + '" style="cursor: pointer;">' +
       '<div class="list-icon">' + (isIncome ? '↑' : '↓') + '</div>' +
       '<div class="list-info"><div class="list-title">' + escapeHtml(nombre) + '</div>' +
       '<div class="list-meta">' + escapeHtml(fecha) + (cat ? ' · ' + escapeHtml(cat) : '') + '</div></div>' +
