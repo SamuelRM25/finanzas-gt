@@ -1824,9 +1824,13 @@ mark.search-highlight { background: rgba(251, 191, 36, 0.3); color: var(--text-1
         <button type="button" class="text-btn aporte-quick" data-amt="500" style="flex:1; padding: 8px; background: var(--bg-input); border-radius: 6px;">Q500</button>
         <button type="button" class="text-btn aporte-quick" data-amt="1000" style="flex:1; padding: 8px; background: var(--bg-input); border-radius: 6px;">Q1000</button>
       </div>
-      <p style="font-size: 11px; color: var(--text-3); margin: 0 0 12px; line-height: 1.5;">
-        El aporte se suma al monto ahorrado de la meta. <b>No se registra como movimiento</b> en ninguna cuenta.
-      </p>
+      <div class="form-field">
+        <label class="form-label">¿Desde qué cuenta se descuenta?</label>
+        <select class="select" id="aporteMetaCuenta">
+          <option value="">Cargando...</option>
+        </select>
+        <div style="font-size: 11px; color: var(--text-3); margin-top: 4px;">Se creará un movimiento de gasto en la cuenta seleccionada y se sumará al ahorro.</div>
+      </div>
       <div class="form-actions">
         <button class="btn-secondary" data-close="aporteMetaModal">Cancelar</button>
         <button class="btn-primary" id="aporteMetaSave">Aportar</button>
@@ -2665,7 +2669,13 @@ async function loadOptions() {
 
 function getOptions(field) {
   const all = ALL_OPTIONS[IDS.dataSourceMov] || {};
-  return all[field] || [];
+  let opts = all[field] || [];
+  // Filtrar nombres de metas de la lista de cuentas
+  if (field === 'Cuenta') {
+    const metaNombres = new Set((ALL_DATA.metas || []).map(m => props(m.properties, 'Meta', '')));
+    opts = opts.filter(o => !metaNombres.has(o));
+  }
+  return opts;
 }
 
 function renderSelect(id, options) {
@@ -3082,12 +3092,13 @@ function renderCuentasCompleto() {
     if (cuenta) porCuenta[cuenta] = (porCuenta[cuenta] || 0) + signo;
   }
 
-  // Nombres de TCs para excluirlas de la lista de cuentas
+  // Nombres de TCs y metas para excluirlos de la lista de cuentas
   const tcNombres = new Set((ALL_DATA.tarjetas || []).map(t => t.name));
+  const metaNombres = new Set((ALL_DATA.metas || []).map(m => props(m.properties, 'Meta', '')));
 
-  // Filtrar TCs fuera de las cuentas normales
+  // Filtrar TCs y metas fuera de las cuentas normales
   const entries = Object.entries(porCuenta)
-    .filter(([name]) => !tcNombres.has(name))
+    .filter(([name]) => !tcNombres.has(name) && !metaNombres.has(name))
     .sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]));
 
   const grid = document.getElementById('cuentasAllGrid');
@@ -3426,6 +3437,8 @@ document.addEventListener('click', async (e) => {
     document.getElementById('aporteMetaActual').innerText = fmt(ahorrado);
     document.getElementById('aporteMetaFaltante').innerText = fmt(Math.max(0, objetivo - ahorrado));
     document.getElementById('aporteMetaMonto').value = '';
+    // Cargar select de cuentas
+    renderSelect('aporteMetaCuenta', getOptions('Cuenta'));
     openModal('aporteMetaModal');
     setTimeout(() => document.getElementById('aporteMetaMonto').focus(), 100);
   }
@@ -3746,14 +3759,29 @@ document.addEventListener('click', function(e) {
 document.getElementById('aporteMetaSave')?.addEventListener('click', async function() {
   const id = document.getElementById('aporteMetaId').value;
   const monto = Number(document.getElementById('aporteMetaMonto').value);
+  const cuenta = document.getElementById('aporteMetaCuenta').value;
   if (!id || !monto || monto <= 0) { showToast('Ingresa un monto válido', 'error'); return; }
+  if (!cuenta) { showToast('Selecciona la cuenta de donde sale el dinero', 'error'); return; }
   try {
+    // 1. Crear movimiento de gasto vinculado a la meta
+    await api('/api/movements', {
+      method: 'POST',
+      body: JSON.stringify({
+        tipo: 'Gasto diario',
+        cuenta: cuenta,
+        monto: monto,
+        categoria: 'Ahorro',
+        metaId: id,
+        nota: 'Aporte a meta',
+      }),
+    });
+    // 2. Actualizar el monto ahorrado de la meta
     await api('/api/metas/' + id, {
       method: 'PATCH',
       body: JSON.stringify({ aporte: monto }),
     });
     closeModal('aporteMetaModal');
-    showToast('Aporte registrado: ' + fmt(monto), 'success');
+    showToast('Aporte de ' + fmt(monto) + ' registrado en ' + cuenta, 'success');
     await cargarTodo();
   } catch (e) { showToast('Error: ' + e.message, 'error'); }
 });
@@ -4674,14 +4702,15 @@ function renderProyeccion() {
   const lastDay = new Date(year, month + 1, 0).getDate();
   const daysRemaining = lastDay - today;
 
-  // Saldo actual de todas las cuentas (excluyendo TCs)
+  // Saldo actual de todas las cuentas (excluyendo TCs y metas)
   const tcNombres = new Set((ALL_DATA.tarjetas || []).map(t => t.name));
+  const metaNombres = new Set((ALL_DATA.metas || []).map(m => props(m.properties, 'Meta', '')));
   const porCuenta = {};
   for (const m of ALL_DATA.movimientos) {
     const cuenta = props(m.properties, 'Cuenta', '');
     const fecha = props(m.properties, 'Fecha', '');
     if (!cuenta || !fecha) continue;
-    if (tcNombres.has(cuenta)) continue; // excluir TCs (deuda no es "saldo")
+    if (tcNombres.has(cuenta) || metaNombres.has(cuenta)) continue;
     const mDate = new Date(fecha);
     if (mDate.getFullYear() !== year || mDate.getMonth() !== month) continue;
     const signo = props(m.properties, 'Signo', 0);
