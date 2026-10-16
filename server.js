@@ -373,7 +373,11 @@ app.post('/api/movements', checkAuth, async (req, res) => {
       });
     }
 
-    // Pago de TC: visacuotas vinculadas primero, luego TC
+    // Pago de TC: UN SOLO cargo en la cuenta origen.
+    // Las visacuotas vinculadas solo avanzan su contador (sin movimientos extra),
+    // y la deuda de la TC (Saldo actual) se reduce. No se crea movimiento en la TC
+    // para no duplicar el cobro.
+    let pagoTcResumen = null;
     if (tipo === 'Pago de tarjeta' && cuentaDestino) {
       try {
         // Buscar visacuotas con Tarjeta = nombre de la TC
@@ -382,6 +386,7 @@ app.post('/api/movements', checkAuth, async (req, res) => {
           rich_text: { contains: cuentaDestino },
         });
         const visacuotas = visQuery.results || [];
+        const avanzadas = [];
         for (const v of visacuotas) {
           const vId = v.id;
           const vProps = v.properties;
@@ -389,37 +394,40 @@ app.post('/api/movements', checkAuth, async (req, res) => {
           const vTotal = vProps['Cuotas totales']?.number || 0;
           const vPagadas = vProps['Cuotas pagadas']?.number || 0;
           if (vPagadas < vTotal) {
-            const vCuota = vProps['Cuota mensual']?.formula?.number || 0;
-            // Incrementar cuotas pagadas
-            await updatePage(vId, {
-              'Cuotas pagadas': { number: vPagadas + 1 },
-            });
-            // Crear movimiento de gasto vinculado a la visacuota
-            await createPage(IDS.movimientos, {
-              ...baseProps,
-              Nombre: { title: [{ text: { content: `Cuota visacuota - ${vNombre} - ${monedaFinal === 'USD' ? '$' : 'Q'}${vCuota}` }}] },
-              Tipo: { select: { name: 'Pago de tarjeta' } },
-              Monto: { number: vCuota },
-              Cuenta: { select: { name: cuenta } },
-              Visacuota: { relation: [{ id: vId }] },
-              Nota: { rich_text: [{ text: { content: `Cuota ${vPagadas + 1}/${vTotal} de "${vNombre}"` } }] },
-            });
+            const nuevasPagadas = vPagadas + 1;
+            const patchProps = { 'Cuotas pagadas': { number: nuevasPagadas } };
+            if (nuevasPagadas >= vTotal) {
+              patchProps.Estado = { select: { name: 'Pagada' } };
+            }
+            // Solo avanzar contador, SIN crear movimientos por visacuota
+            // (el unico movimiento financiero es el base en la cuenta origen).
+            await updatePage(vId, patchProps);
+            avanzadas.push(`${vNombre} (${nuevasPagadas}/${vTotal})`);
           }
         }
+        // Reducir la deuda de la TC (Saldo actual)
+        let nuevoSaldoTc = null;
+        try {
+          const tarjetas = await loadTarjetas();
+          const tc = (tarjetas || []).find(t => t.name === cuentaDestino);
+          if (tc) {
+            nuevoSaldoTc = Math.max(0, (Number(tc.saldoActual) || 0) - Math.abs(Number(monto) || 0));
+            await updatePage(tc.id, { 'Saldo actual': { number: nuevoSaldoTc } });
+          }
+        } catch (e) {
+          console.error('Error actualizando saldo de TC:', e.message);
+        }
+        pagoTcResumen = {
+          visacuotasAvanzadas: avanzadas.length,
+          detalle: avanzadas,
+          nuevoSaldoTc,
+        };
       } catch (e) {
         console.error('Error actualizando visacuotas:', e.message);
       }
-      // Marcar TC como pagada (crear movimiento de ingreso en TC)
-      await createPage(IDS.movimientos, {
-        ...baseProps,
-        Nombre: { title: [{ text: { content: `Pago TC - ${cuentaDestino} - ${monedaFinal === 'USD' ? '$' : 'Q'}${Math.abs(monto)}` }}] },
-        Tipo: { select: { name: 'Pago de tarjeta' } },
-        Cuenta: { select: { name: cuentaDestino } },
-        Nota: { rich_text: [{ text: { content: `Pagado desde ${cuenta}: ${notaFinal}` } }] },
-      });
     }
 
-    res.json({ ok: true, id: movimiento.id });
+    res.json({ ok: true, id: movimiento.id, pagoTc: pagoTcResumen });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }

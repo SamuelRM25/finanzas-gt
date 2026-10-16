@@ -3602,6 +3602,32 @@ document.addEventListener('click', async (e) => {
   if (action === 'pay-cuota') {
     const id = e.target.closest('[data-id]').dataset.id;
     const tipo = e.target.closest('[data-tipo]').dataset.tipo;
+    // Pago total de TC: un solo cargo en origen, el servidor avanza las visacuotas
+    if (tipo === 'tarjeta') {
+      const tcName = String(id || '').replace(/^tc:/, '');
+      const pagos = getUpcomingPayments();
+      const pagoTc = pagos.find(p => p.type === 'tarjeta' && p.itemId === id)
+        || pagos.find(p => p.type === 'tarjeta' && p.name.indexOf(tcName) === 0);
+      if (!pagoTc) { showToast('No hay pago pendiente para esta tarjeta', 'error'); return; }
+      const cuenta = prompt(`Pagar ${fmt(pagoTc.monto)} de "${tcName}" (${pagoTc.visacuotasCount || ''} visacuotas)\n¿Desde qué cuenta?`);
+      if (!cuenta) return;
+      try {
+        await api('/api/movements', {
+          method: 'POST',
+          body: JSON.stringify({
+            tipo: 'Pago de tarjeta',
+            cuenta: cuenta.trim(),
+            cuentaDestino: tcName,
+            monto: pagoTc.monto,
+            categoria: 'Pago de tarjeta',
+            nota: `Pago total TC "${tcName}" (${pagoTc.visacuotasCount || 0} visacuotas)`,
+          }),
+        });
+        showToast(`Pago de ${fmt(pagoTc.monto)} a "${tcName}" registrado (cargo unico)`, 'success');
+        await cargarTodo();
+      } catch (err) { showToast('Error: ' + err.message, 'error'); }
+      return;
+    }
     // Obtener el monto automático
     const all = tipo === 'prestamo' ? ALL_DATA.prestamos : ALL_DATA.visacuotas;
     const item = all.find(x => x.id === id);
@@ -4215,9 +4241,16 @@ function renderCalendario() {
     dayList.innerHTML = '<div class="empty">No hay pagos este día</div>';
   } else {
     dayList.innerHTML = dayPagosToShow.map(function(p) {
-      const icon = p.type === 'prestamo' ? 'B' : 'V';
+      const isTc = p.type === 'tarjeta';
+      const tcName = isTc ? String(p.itemId || '').replace(/^tc:/, '') : '';
+      const icon = p.type === 'prestamo' ? 'B' : (isTc ? 'C' : 'V');
       const urgency = p.isPast ? 'vencido' : (p.isToday ? 'hoy' : 'en ' + p.daysUntil + 'd');
-      return '<div class="list-item" data-action="' + (p.type === 'prestamo' ? 'view-prestamo' : 'view-visacuota') + '" data-id="' + p.itemId + '">' +
+      const openAttrs = p.type === 'prestamo'
+        ? 'data-action="view-prestamo" data-id="' + p.itemId + '"'
+        : (isTc
+          ? 'data-action="view-tc-detail" data-tarjeta-name="' + escapeHtml(tcName) + '"'
+          : 'data-action="view-visacuota" data-id="' + p.itemId + '"');
+      return '<div class="list-item" ' + openAttrs + '>' +
         '<div class="list-icon ' + p.type + '">' + icon + '</div>' +
         '<div class="list-info"><div class="list-title">' + escapeHtml(p.name) + '</div>' +
         '<div class="list-meta">' + urgency + ' · ' + fmt(p.monto) + '</div></div>' +
