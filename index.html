@@ -1922,6 +1922,49 @@ mark.search-highlight { background: rgba(251, 191, 36, 0.3); color: var(--text-1
     </div>
   </div>
 
+  <!-- ============ MODAL: PAGAR TARJETA ============ -->
+  <div class="modal-overlay" id="pagarTcModal">
+    <div class="modal">
+      <div class="modal-grabber"></div>
+      <div class="modal-header">
+        <div class="modal-title">Pagar tarjeta</div>
+        <button class="modal-close" data-close="pagarTcModal">X</button>
+      </div>
+      <input type="hidden" id="pagarTcNombre">
+      <div style="text-align: center; padding: 8px 0 16px;">
+        <div style="font-size: 12px; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.05em;">Tarjeta</div>
+        <div id="pagarTcTitulo" style="font-family: var(--font-display); font-size: 22px; margin-top: 4px;">—</div>
+        <div id="pagarTcSub" style="font-size: 12px; color: var(--text-2); margin-top: 4px;">—</div>
+      </div>
+      <div class="form-field">
+        <label class="form-label">Suma de visacuotas del mes (Q)</label>
+        <input type="number" class="input" id="pagarTcSuma" step="0.01" min="0" readonly style="opacity: 0.7;">
+      </div>
+      <div class="form-field">
+        <label class="form-label">Extra aparte de visacuotas (Q)</label>
+        <input type="number" class="input" id="pagarTcExtra" step="0.01" min="0" placeholder="0.00">
+        <div style="font-size: 11px; color: var(--text-3); margin-top: 4px;">Ej. otros consumos del estado de cuenta que no son visacuotas.</div>
+      </div>
+      <div class="form-field">
+        <label class="form-label">Total a pagar (Q)</label>
+        <input type="number" class="input" id="pagarTcTotal" step="0.01" min="0" placeholder="0.00">
+      </div>
+      <div class="form-field">
+        <label class="form-label">¿Desde qué cuenta se descuenta?</label>
+        <select class="select" id="pagarTcCuenta">
+          <option value="">Cargando...</option>
+        </select>
+      </div>
+      <p style="font-size: 11px; color: var(--text-3); margin: 0 0 12px; line-height: 1.5;">
+        Se crea <b>un solo movimiento</b> en la cuenta seleccionada. Las visacuotas solo avanzan su contador, sin cargos extra.
+      </p>
+      <div class="form-actions">
+        <button class="btn-secondary" data-close="pagarTcModal">Cancelar</button>
+        <button class="btn-primary" id="pagarTcSave">Confirmar pago</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ============ MODAL: OCR RECIBO ============ -->
   <div class="modal-overlay" id="ocrModal">
     <div class="modal">
@@ -2874,6 +2917,10 @@ document.addEventListener('click', (e) => {
     document.querySelector('[data-action="delete-tarjeta"]').style.display = '';
     openModal('tarjetaModal');
   }
+  if (action === 'pay-tarjeta') {
+    const tarjeta = e.target.closest('[data-tarjeta-name]').dataset.tarjetaName;
+    openPagarTcModal(tarjeta);
+  }
   if (action === 'view-tc-detail') {
     const tarjeta = e.target.closest('[data-tarjeta-name]').dataset.tarjetaName;
     document.getElementById('tcVisacuotasTitle').innerText = 'Visacuotas: ' + tarjeta;
@@ -3162,6 +3209,7 @@ function renderTarjetas() {
         limitBar +
       '</div>' +
       '<div class="tc-actions">' +
+        '<button class="text-btn" data-action="pay-tarjeta" data-tarjeta-name="' + escapeHtml(t.name) + '">Pagar</button>' +
         '<button class="text-btn" data-action="edit-tarjeta" data-tarjeta-id="' + t.id + '">Editar</button>' +
         '<button class="text-btn" data-action="view-tc-detail" data-tarjeta-name="' + escapeHtml(t.name) + '">Ver visacuotas</button>' +
       '</div>' +
@@ -3602,30 +3650,10 @@ document.addEventListener('click', async (e) => {
   if (action === 'pay-cuota') {
     const id = e.target.closest('[data-id]').dataset.id;
     const tipo = e.target.closest('[data-tipo]').dataset.tipo;
-    // Pago total de TC: un solo cargo en origen, el servidor avanza las visacuotas
+    // Pago total de TC: abre el modal con suma de visacuotas + extra opcional
     if (tipo === 'tarjeta') {
       const tcName = String(id || '').replace(/^tc:/, '');
-      const pagos = getUpcomingPayments();
-      const pagoTc = pagos.find(p => p.type === 'tarjeta' && p.itemId === id)
-        || pagos.find(p => p.type === 'tarjeta' && p.name.indexOf(tcName) === 0);
-      if (!pagoTc) { showToast('No hay pago pendiente para esta tarjeta', 'error'); return; }
-      const cuenta = prompt(`Pagar ${fmt(pagoTc.monto)} de "${tcName}" (${pagoTc.visacuotasCount || ''} visacuotas)\n¿Desde qué cuenta?`);
-      if (!cuenta) return;
-      try {
-        await api('/api/movements', {
-          method: 'POST',
-          body: JSON.stringify({
-            tipo: 'Pago de tarjeta',
-            cuenta: cuenta.trim(),
-            cuentaDestino: tcName,
-            monto: pagoTc.monto,
-            categoria: 'Pago de tarjeta',
-            nota: `Pago total TC "${tcName}" (${pagoTc.visacuotasCount || 0} visacuotas)`,
-          }),
-        });
-        showToast(`Pago de ${fmt(pagoTc.monto)} a "${tcName}" registrado (cargo unico)`, 'success');
-        await cargarTodo();
-      } catch (err) { showToast('Error: ' + err.message, 'error'); }
+      openPagarTcModal(tcName);
       return;
     }
     // Obtener el monto automático
@@ -3731,6 +3759,81 @@ document.getElementById('pagarPresSave')?.addEventListener('click', async functi
     });
     closeModal('pagarPresupuestoModal');
     const msg = mora > 0 ? `Pago de ${fmt(monto)} + mora de ${fmt(mora)} registrado` : `Pago de ${fmt(monto)} registrado`;
+    showToast(msg, 'success');
+    await cargarTodo();
+  } catch (e) { showToast('Error: ' + e.message, 'error'); }
+});
+
+/* ---------- PAGAR TARJETA (suma visacuotas + extra) ---------- */
+function getSumaVisacuotasTc(tcName) {
+  let suma = 0;
+  let count = 0;
+  for (const v of ALL_DATA.visacuotas) {
+    const tarjeta = props(v.properties, 'Tarjeta', '');
+    if (tarjeta !== tcName) continue;
+    const pag = props(v.properties, 'Cuotas pagadas', 0);
+    const total = props(v.properties, 'Cuotas totales', 0);
+    if (pag >= total) continue;
+    suma += props(v.properties, 'Cuota mensual', 0);
+    count += 1;
+  }
+  return { suma, count };
+}
+
+function openPagarTcModal(tcName) {
+  if (!tcName) { showToast('Selecciona una tarjeta', 'error'); return; }
+  const info = getSumaVisacuotasTc(tcName);
+  document.getElementById('pagarTcNombre').value = tcName;
+  document.getElementById('pagarTcTitulo').innerText = tcName;
+  document.getElementById('pagarTcSub').innerText = info.count + ' visacuota(s) activa(s) este mes';
+  document.getElementById('pagarTcSuma').value = info.suma.toFixed(2);
+  document.getElementById('pagarTcExtra').value = '';
+  document.getElementById('pagarTcTotal').value = info.suma.toFixed(2);
+  renderSelect('pagarTcCuenta', getOptions('Cuenta'));
+  openModal('pagarTcModal');
+}
+
+function recalcPagarTcTotal(origen) {
+  const suma = Number(document.getElementById('pagarTcSuma').value) || 0;
+  let extra = Number(document.getElementById('pagarTcExtra').value) || 0;
+  if (extra < 0) {
+    extra = 0;
+    document.getElementById('pagarTcExtra').value = '0';
+  }
+  if (origen === 'total') return;
+  document.getElementById('pagarTcTotal').value = (suma + extra).toFixed(2);
+}
+
+document.getElementById('pagarTcExtra')?.addEventListener('input', function() { recalcPagarTcTotal('extra'); });
+
+document.getElementById('pagarTcSave')?.addEventListener('click', async function() {
+  const tcName = document.getElementById('pagarTcNombre').value;
+  const suma = Number(document.getElementById('pagarTcSuma').value) || 0;
+  const extra = Number(document.getElementById('pagarTcExtra').value) || 0;
+  const total = Number(document.getElementById('pagarTcTotal').value) || 0;
+  const cuenta = document.getElementById('pagarTcCuenta').value;
+  if (!tcName) { showToast('Selecciona una tarjeta', 'error'); return; }
+  if (!total || total <= 0) { showToast('Ingresa un total válido', 'error'); return; }
+  if (!cuenta) { showToast('Selecciona la cuenta de donde sale el dinero', 'error'); return; }
+  try {
+    const nota = extra > 0
+      ? `Pago TC "${tcName}": visacuotas ${fmt(suma)} + extra ${fmt(extra)}`
+      : `Pago total TC "${tcName}" (visacuotas)`;
+    await api('/api/movements', {
+      method: 'POST',
+      body: JSON.stringify({
+        tipo: 'Pago de tarjeta',
+        cuenta: cuenta,
+        cuentaDestino: tcName,
+        monto: total,
+        categoria: 'Pago de tarjeta',
+        nota: nota,
+      }),
+    });
+    closeModal('pagarTcModal');
+    const msg = extra > 0
+      ? `Pago de ${fmt(total)} a "${tcName}" registrado (incluye ${fmt(extra)} extra, cargo unico)`
+      : `Pago de ${fmt(total)} a "${tcName}" registrado (cargo unico)`;
     showToast(msg, 'success');
     await cargarTodo();
   } catch (e) { showToast('Error: ' + e.message, 'error'); }
