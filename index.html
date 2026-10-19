@@ -3111,7 +3111,13 @@ function actualizarStats() {
 }
 
 function renderCuentas(porCuenta) {
-  const entries = Object.entries(porCuenta).sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]));
+  // Excluir TCs y metas del Inicio: solo cuentas reales
+  // (las TC viven en Cuentas > Tarjetas con deuda/disponible)
+  const tcNombres = new Set((ALL_DATA.tarjetas || []).map(t => t.name));
+  const metaNombres = new Set((ALL_DATA.metas || []).map(m => props(m.properties, 'Meta', '')));
+  const entries = Object.entries(porCuenta)
+    .filter(([name]) => !tcNombres.has(name) && !metaNombres.has(name))
+    .sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]));
   const grid = document.getElementById('cuentasGrid');
   if (entries.length === 0) { grid.innerHTML = '<div class="empty">Sin datos este mes</div>'; return; }
   const showCount = window.innerWidth > 768 ? 6 : 4;
