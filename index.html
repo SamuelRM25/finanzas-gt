@@ -3457,16 +3457,16 @@ document.addEventListener('click', async (e) => {
     const id = e.target.closest('[data-id]').dataset.id;
     const p = ALL_DATA.presupuestos.find(x => x.id === id);
     if (!p) return;
-    const concepto = props(p.properties, 'Concepto', '?');
-    const limite = props(p.properties, 'Limite', 0);
+    const concepto = props(p.properties, 'Categoria', '?');
+    const limite = props(p.properties, 'Limite mensual', 0);
+    const pagado = props(p.properties, 'Monto pagado', 0);
+    const pendiente = Math.max(0, limite - pagado);
     document.getElementById('pagarPresId').value = id;
     document.getElementById('pagarPresConcepto').innerText = concepto;
-    document.getElementById('pagarPresLimite').innerText = 'Límite: ' + fmt(limite);
-    document.getElementById('pagarPresMonto').value = limite;
-    // Cargar select de cuentas
-    if (document.getElementById('cuentaSelect')) {
-      renderSelect('pagarPresCuenta', getOptions('Cuenta'));
-    }
+    document.getElementById('pagarPresLimite').innerText = 'Límite: ' + fmt(limite) + (pagado > 0 ? ' · Pagado: ' + fmt(pagado) : '');
+    document.getElementById('pagarPresMonto').value = pendiente > 0 ? pendiente : limite;
+    // Cargar select de cuentas (siempre, para poder elegir de dónde sale el pago)
+    renderSelect('pagarPresCuenta', getOptions('Cuenta'));
     document.getElementById('pagarPresMoraCheck').checked = false;
     document.getElementById('pagarPresMoraWrap').classList.add('hidden');
     document.getElementById('pagarPresMora').value = '';
@@ -3752,10 +3752,10 @@ document.getElementById('pagarPresSave')?.addEventListener('click', async functi
         }),
       });
     }
-    // 3. Marcar presupuesto como pagado
+    // 3. Marcar presupuesto como pagado y registrar lo pagado
     await api(`/api/presupuestos/${id}`, {
       method: 'PATCH',
-      body: JSON.stringify({ estado: 'Pagado' }),
+      body: JSON.stringify({ estado: 'Pagado', montoPagado: monto }),
     });
     closeModal('pagarPresupuestoModal');
     const msg = mora > 0 ? `Pago de ${fmt(monto)} + mora de ${fmt(mora)} registrado` : `Pago de ${fmt(monto)} registrado`;

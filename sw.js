@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mifinanza-v2';
+const CACHE_NAME = 'mifinanza-v3';
 const ASSETS = [
   '/',
   '/index.html',
@@ -37,6 +37,24 @@ self.addEventListener('fetch', (e) => {
           return r;
         })
         .catch(() => caches.match(e.request).then((r) => r || new Response(JSON.stringify({ error: 'offline' }), { headers: { 'Content-Type': 'application/json' } })))
+    );
+    return;
+  }
+
+  // Navegación (HTML): network-first para no quedarse con versiones viejas
+  const isDocument = e.request.mode === 'navigate' ||
+    (e.request.destination === 'document') ||
+    url.pathname === '/' ||
+    url.pathname === '/index.html';
+  if (isDocument) {
+    e.respondWith(
+      fetch(e.request)
+        .then((r) => {
+          const clone = r.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put('/index.html', clone));
+          return r;
+        })
+        .catch(() => caches.match(e.request).then((r) => r || caches.match('/index.html')).then((r) => r || caches.match('/')))
     );
     return;
   }
