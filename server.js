@@ -79,21 +79,40 @@ async function notionFetch(path, options = {}) {
   return response;
 }
 
-async function queryDatabase(dataSourceId, filter = null, sorts = [], pageSize = 100) {
-  // Construir el body sin filter si está vacío
-  const body = { page_size: pageSize };
-  if (filter && Object.keys(filter).length > 0) body.filter = filter;
-  if (sorts && sorts.length > 0) body.sorts = sorts;
+const MAX_QUERY_PAGES = 100; // tope de seguridad: 100 paginas x 100 = 10,000 filas
 
-  const r = await notionFetch(`/data_sources/${dataSourceId}/query`, {
-    method: 'POST',
-    body: JSON.stringify(body),
-  });
-  if (!r.ok) {
-    const text = await r.text();
-    throw new Error(`Notion ${r.status}: ${text}`);
+async function queryDatabase(dataSourceId, filter = null, sorts = [], pageSize = 100) {
+  const results = [];
+  let cursor = null;
+
+  for (let page = 0; page < MAX_QUERY_PAGES; page++) {
+    const body = { page_size: pageSize };
+    if (filter && Object.keys(filter).length > 0) body.filter = filter;
+    if (sorts && sorts.length > 0) body.sorts = sorts;
+    if (cursor) body.start_cursor = cursor;
+
+    const r = await notionFetch(`/data_sources/${dataSourceId}/query`, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    });
+    if (!r.ok) {
+      const text = await r.text();
+      throw new Error(`Notion ${r.status}: ${text}`);
+    }
+
+    const data = await r.json();
+    results.push(...(data.results || []));
+
+    if (!data.has_more || !data.next_cursor) break;
+    cursor = data.next_cursor;
   }
-  return r.json();
+
+  return {
+    object: 'list',
+    results,
+    next_cursor: null,
+    has_more: false,
+  };
 }
 
 async function createPage(databaseId, properties) {
