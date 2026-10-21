@@ -3398,7 +3398,7 @@ function renderMetas() {
         <div class="progress-bar"><div class="progress-fill gold" style="width: ${pct}%"></div></div>
       </div>
       <div class="list-amount gold">${fmt(obj - saved)}</div>
-      <button class="text-btn" data-action="add-money-meta" data-id="${m.id}" data-nombre="${escapeHtml(name)}" onclick="event.stopPropagation()">+ Aportar</button>
+      <button class="text-btn" data-action="add-money-meta" data-id="${m.id}" data-nombre="${escapeHtml(name)}">+ Aportar</button>
     </div>`;
   }).join('');
 }
