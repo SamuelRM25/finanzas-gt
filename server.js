@@ -18,6 +18,7 @@ const IDS = {
   prestamos: '3f5e0d97deba8106a007d9b0bdbd0bdb',
   visacuotas: '3f6e0d97deba81b0acdbdc68104dd09a',
   tarjetas: '3ee575263b0e4e72a40757690bc846e2',
+  suscripciones: '89b7a512-0037-4398-a4e0-ae82c1ed6ac3',
   // Data source IDs (para queries y properties)
   dataSourceMov: '3f5e0d97deba814ebf1b000bc7a38d76',
   dataSourcePres: '3f5e0d97deba8152b5d3000b53c4e437',
@@ -25,6 +26,7 @@ const IDS = {
   dataSourcePrest: '3f5e0d97deba81c589af000b847016bf',
   dataSourceVisa: '3f6e0d97deba81b18396000be7473244',
   dataSourceTarjetas: '512162cf5fda449ab49be3af66596efa',
+  dataSourceSuscripciones: '9f24468d-0529-46e5-a534-53a860561038',
 };
 const APP_PASSWORD = process.env.APP_PASSWORD || '';
 const NOTION_TOKEN = process.env.NOTION_TOKEN || '';
@@ -36,6 +38,7 @@ const SELECT_FIELDS = {
   [IDS.dataSourceMetas]: ['Estado', 'Estrategia'],
   [IDS.dataSourcePrest]: ['Tipo', 'Estado', 'Tipo tasa'],
   [IDS.dataSourceVisa]: ['Estado', 'Tipo cuota'],
+  [IDS.dataSourceSuscripciones]: ['Frecuencia', 'Estado'],
 };
 
 // Para /api/options (POST): mapeo field -> data source ID
@@ -582,6 +585,121 @@ async function getMetaAhorrado(id) {
 }
 
 // ============================================
+// SUSCRIPCIONES
+// ============================================
+function suscripcionProps(p = {}) {
+  return {
+    suscripcion: p['Suscripcion']?.title?.[0]?.plain_text || p['Suscripcion']?.title?.[0]?.text?.content || '?',
+    monto: p['Monto']?.number || 0,
+    frecuencia: p['Frecuencia']?.select?.name || 'Mensual',
+    diaCobro: p['Dia de cobro']?.number || null,
+    cuenta: p['Cuenta']?.rich_text?.[0]?.plain_text || p['Cuenta']?.rich_text?.[0]?.text?.content || '',
+    estado: p['Estado']?.select?.name || 'Activa',
+    ultimoPago: p['Ultimo pago']?.date?.start || null,
+    notas: p['Notas']?.rich_text?.[0]?.plain_text || '',
+  };
+}
+
+function buildSuscripcionProps(body = {}) {
+  const { suscripcion, monto, frecuencia, diaCobro, cuenta, estado, notas, ultimoPago } = body;
+  const props = {};
+  if (suscripcion !== undefined) props['Suscripcion'] = { title: [{ text: { content: suscripcion } }] };
+  if (monto !== undefined) props['Monto'] = { number: Number(monto) };
+  if (frecuencia !== undefined) props['Frecuencia'] = { select: { name: frecuencia } };
+  if (diaCobro !== undefined && diaCobro !== null && diaCobro !== '')
+    props['Dia de cobro'] = { number: Number(diaCobro) };
+  if (cuenta !== undefined) props['Cuenta'] = { rich_text: cuenta ? [{ text: { content: cuenta } }] : [] };
+  if (estado !== undefined) props['Estado'] = { select: { name: estado } };
+  if (notas !== undefined) props['Notas'] = { rich_text: notas ? [{ text: { content: notas } }] : [] };
+  if (ultimoPago !== undefined) props['Ultimo pago'] = ultimoPago ? { date: { start: ultimoPago } } : { date: null };
+  return props;
+}
+
+app.get('/api/suscripciones', checkAuth, async (req, res) => {
+  try {
+    const data = await queryDatabase(IDS.dataSourceSuscripciones, {}, [], 100);
+    res.json({
+      ...data,
+      results: (data.results || []).map(p => ({ id: p.id, ...suscripcionProps(p.properties), archived: p.archived, created_time: p.created_time })),
+    });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post('/api/suscripciones', checkAuth, async (req, res) => {
+  try {
+    const { suscripcion, monto } = req.body || {};
+    if (!suscripcion || !monto) return res.status(400).json({ error: 'suscripcion y monto requeridos' });
+    const page = await createPage(IDS.suscripciones, buildSuscripcionProps({
+      suscripcion, monto, ...req.body,
+      frecuencia: req.body.frecuencia || 'Mensual',
+      estado: req.body.estado || 'Activa',
+    }));
+    res.json({ ok: true, id: page.id });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.patch('/api/suscripciones/:id', checkAuth, async (req, res) => {
+  try {
+    const page = await updatePage(req.params.id, buildSuscripcionProps(req.body || {}));
+    res.json({ ok: true, id: page.id });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.delete('/api/suscripciones/:id', checkAuth, async (req, res) => {
+  try {
+    const r = await notionFetch(`/pages/${req.params.id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ in_trash: true }),
+    });
+    if (!r.ok) throw new Error(`Notion ${r.status}: ${await r.text()}`);
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Pagar una suscripción: crea el gasto en la cuenta asignada y registra el último pago
+app.post('/api/suscripciones/:id/pagar', checkAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { monto, fecha, nota } = req.body || {};
+
+    const r = await notionFetch(`/pages/${id}`);
+    if (!r.ok) throw new Error(`Notion ${r.status}: ${await r.text()}`);
+    const sub = suscripcionProps((await r.json()).properties);
+
+    const cuenta = req.body.cuenta || sub.cuenta;
+    if (!cuenta) return res.status(400).json({ error: 'La suscripción no tiene cuenta asignada' });
+    const montoFinal = Number(monto || sub.monto);
+    if (!montoFinal) return res.status(400).json({ error: 'Monto inválido' });
+    const fechaFinal = fecha || new Date().toISOString().split('T')[0];
+
+    const movimiento = await createPage(IDS.movimientos, {
+      Nombre: { title: [{ text: { content: `Gasto - ${cuenta} - Q${montoFinal}` } }] },
+      Fecha: { date: { start: fechaFinal } },
+      Tipo: { select: { name: 'Gasto' } },
+      Monto: { number: montoFinal },
+      Categoria: { select: { name: 'Suscripciones' } },
+      Cuenta: { select: { name: cuenta } },
+      Moneda: { select: { name: 'GTQ' } },
+      Nota: { rich_text: [{ text: { content: nota || `Suscripción: ${sub.suscripcion}` } }] },
+    });
+
+    await updatePage(id, { 'Ultimo pago': { date: { start: fechaFinal } } });
+
+    res.json({ ok: true, id: movimiento.id, movimientoId: movimiento.id, fecha: fechaFinal });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ============================================
 // PRESTAMOS
 // ============================================
 app.get('/api/prestamos', checkAuth, async (req, res) => {
@@ -852,6 +970,7 @@ app.get('/api/backup/export', checkAuth, async (req, res) => {
       ['prestamos', IDS.dataSourcePrest],
       ['visacuotas', IDS.dataSourceVisa],
       ['tarjetas', IDS.dataSourceTarjetas],
+      ['suscripciones', IDS.dataSourceSuscripciones],
     ];
     for (const [name, dsId] of dbs) {
       try {

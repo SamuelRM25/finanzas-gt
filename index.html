@@ -1394,6 +1394,24 @@ mark.search-highlight { background: rgba(251, 191, 36, 0.3); color: var(--text-1
     </div>
   </div>
 
+  <!-- ============ SUSCRIPCIONES ============ -->
+  <div class="page" id="page-suscripciones" data-page="suscripciones">
+    <div class="page-header">
+      <div>
+        <div class="page-eyebrow">Gastos fijos</div>
+        <h1 class="page-title">Suscripciones</h1>
+      </div>
+      <button class="text-btn" data-action="add-suscripcion">+ Agregar</button>
+    </div>
+    <div class="section" id="suscripcionesResumen"></div>
+    <div id="suscripcionesSugeridas"></div>
+    <div class="section">
+      <div class="list" id="suscripcionesList">
+        <div class="empty">Cargando…</div>
+      </div>
+    </div>
+  </div>
+
   <!-- ============ PRESTAMOS ============ -->
   <div class="page" id="page-prestamos" data-page="prestamos">
     <div class="page-header">
@@ -1533,6 +1551,13 @@ mark.search-highlight { background: rgba(251, 191, 36, 0.3); color: var(--text-1
           <div class="list-info">
             <div class="list-title">Metas de ahorro</div>
             <div class="list-meta">Ahorra con estrategia</div>
+          </div>
+        </button>
+        <button class="list-item" data-go="suscripciones" style="width:100%; text-align:left; background:none;">
+          <div class="list-icon">S</div>
+          <div class="list-info">
+            <div class="list-title">Suscripciones</div>
+            <div class="list-meta">Total mensual y cuentas de cobro</div>
           </div>
         </button>
         <button class="list-item" data-go="prestamos" style="width:100%; text-align:left; background:none;">
@@ -1834,6 +1859,99 @@ mark.search-highlight { background: rgba(251, 191, 36, 0.3); color: var(--text-1
       <div class="form-actions">
         <button class="btn-secondary" data-close="aporteMetaModal">Cancelar</button>
         <button class="btn-primary" id="aporteMetaSave">Aportar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ MODAL: SUSCRIPCION ============ -->
+  <div class="modal-overlay" id="suscripcionModal">
+    <div class="modal">
+      <div class="modal-grabber"></div>
+      <div class="modal-header">
+        <div class="modal-title" id="suscripcionModalTitle">Nueva suscripción</div>
+        <button class="modal-close" data-close="suscripcionModal">X</button>
+      </div>
+      <input type="hidden" id="suscripcionId">
+      <div class="form-field">
+        <label class="form-label">Nombre</label>
+        <input type="text" class="input" id="suscripcionNombre" placeholder="Netflix, Spotify, Gym...">
+      </div>
+      <div style="display: flex; gap: 10px;">
+        <div class="form-field" style="flex: 1;">
+          <label class="form-label">Monto (Q)</label>
+          <input type="number" class="input" id="suscripcionMonto" step="0.01" min="0" placeholder="0.00">
+        </div>
+        <div class="form-field" style="flex: 1;">
+          <label class="form-label">Frecuencia</label>
+          <select class="select" id="suscripcionFrecuencia">
+            <option value="Mensual">Mensual</option>
+            <option value="Anual">Anual</option>
+          </select>
+        </div>
+      </div>
+      <div style="display: flex; gap: 10px;">
+        <div class="form-field" style="flex: 1;">
+          <label class="form-label">Día de cobro</label>
+          <input type="number" class="input" id="suscripcionDia" min="1" max="31" placeholder="1-31">
+        </div>
+        <div class="form-field" style="flex: 1;">
+          <label class="form-label">Estado</label>
+          <select class="select" id="suscripcionEstado">
+            <option value="Activa">Activa</option>
+            <option value="Pausada">Pausada</option>
+            <option value="Cancelada">Cancelada</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-field">
+        <label class="form-label">Cuenta de la que se debita</label>
+        <select class="select" id="suscripcionCuenta">
+          <option value="">Seleccionar...</option>
+        </select>
+      </div>
+      <div class="form-field">
+        <label class="form-label">Notas</label>
+        <input type="text" class="input" id="suscripcionNotas" placeholder="Opcional">
+      </div>
+      <div class="form-actions">
+        <button class="btn-secondary" id="suscripcionDeleteBtn" style="display:none;">Eliminar</button>
+        <button class="btn-secondary" data-close="suscripcionModal">Cancelar</button>
+        <button class="btn-primary" id="suscripcionSave">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ MODAL: PAGAR SUSCRIPCION ============ -->
+  <div class="modal-overlay" id="pagarSuscripcionModal">
+    <div class="modal">
+      <div class="modal-grabber"></div>
+      <div class="modal-header">
+        <div class="modal-title">Pagar suscripción</div>
+        <button class="modal-close" data-close="pagarSuscripcionModal">X</button>
+      </div>
+      <input type="hidden" id="pagarSuscripcionId">
+      <div style="text-align: center; padding: 12px 0;">
+        <div style="font-size: 12px; color: var(--text-3); text-transform: uppercase;">Suscripción</div>
+        <div id="pagarSuscripcionNombre" style="font-family: var(--font-display); font-size: 24px; margin-top: 4px;">—</div>
+        <div id="pagarSuscripcionInfo" style="font-size: 12px; color: var(--text-3); margin-top: 6px;"></div>
+      </div>
+      <div class="form-field">
+        <label class="form-label">Monto a pagar (Q)</label>
+        <input type="number" class="input" id="pagarSuscripcionMonto" step="0.01" min="0">
+      </div>
+      <div class="form-field">
+        <label class="form-label">Desde qué cuenta</label>
+        <select class="select" id="pagarSuscripcionCuenta">
+          <option value="">Seleccionar...</option>
+        </select>
+      </div>
+      <div class="form-field">
+        <label class="form-label">Fecha del pago</label>
+        <input type="date" class="input" id="pagarSuscripcionFecha">
+      </div>
+      <div class="form-actions">
+        <button class="btn-secondary" data-close="pagarSuscripcionModal">Cancelar</button>
+        <button class="btn-primary" id="pagarSuscripcionSave">Pagar</button>
       </div>
     </div>
   </div>
@@ -2336,7 +2454,7 @@ const escapeHtml = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&l
 
 /* ---------- STATE ---------- */
 let ALL_OPTIONS = {}; // { dbId: { field: [options] } }
-let ALL_DATA = { movimientos: [], presupuestos: [], metas: [], prestamos: [], visacuotas: [], tarjetas: [] };
+let ALL_DATA = { movimientos: [], presupuestos: [], metas: [], prestamos: [], visacuotas: [], tarjetas: [], suscripciones: [] };
 let SETTINGS = { exchangeRate: 7.8, rememberSession: true };
 
 /* ---------- AUTH ---------- */
@@ -2654,6 +2772,7 @@ function goToPage(pageId) {
   if (pageId === 'visacuotas') loadVisacuotas();
   if (pageId === 'cuentas') renderCuentasCompleto();
   if (pageId === 'movimientos') loadMovimientos();
+  if (pageId === 'suscripciones') { loadSuscripciones(); renderSugerenciasSuscripciones(); }
   if (pageId === 'calendario') renderCalendario();
   if (pageId === 'cuenta-detalle') renderCuentaDetalle();
 }
@@ -3018,6 +3137,7 @@ async function cargarTodo() {
     loadPrestamos().catch(e => console.error(e)),
     loadVisacuotas().catch(e => console.error(e)),
     loadTarjetas().catch(e => console.error(e)),
+    loadSuscripciones().catch(e => console.error(e)),
   ]);
   actualizarStats();
   renderDashboardExtras();
@@ -3065,6 +3185,15 @@ async function loadTarjetas() {
       renderSelect('visTarjetaSelect', ALL_DATA.tarjetas.map(t => t.name));
     }
   } catch (e) { console.error('Error cargando tarjetas:', e.message); }
+}
+
+async function loadSuscripciones() {
+  try {
+    const res = await api('/api/suscripciones');
+    ALL_DATA.suscripciones = (res.results || []).map(normalizarSuscripcion);
+    renderSuscripcionesPage();
+    renderSugerenciasSuscripciones();
+  } catch (e) { console.error('Error cargando suscripciones:', e.message); }
 }
 
 function props(p, key, def) {
@@ -4831,6 +4960,296 @@ function renderSuscripciones() {
       deltaHtml + '</div></div>';
   }).join('');
 }
+
+/* ============================================
+   APARTADO SUSCRIPCIONES
+   ============================================ */
+function normalizarSuscripcion(p) {
+  const pr = p.properties || p;
+  return {
+    id: p.id,
+    nombre: props(pr, 'Suscripcion', '?'),
+    monto: Number(props(pr, 'Monto', 0)) || 0,
+    frecuencia: props(pr, 'Frecuencia', 'Mensual'),
+    diaCobro: props(pr, 'Dia de cobro', null),
+    cuenta: props(pr, 'Cuenta', ''),
+    estado: props(pr, 'Estado', 'Activa'),
+    ultimoPago: props(pr, 'Ultimo pago', null),
+    notas: props(pr, 'Notas', ''),
+  };
+}
+function subMensual(s) { return s.frecuencia === 'Anual' ? s.monto / 12 : s.monto; }
+function subAnual(s) { return s.frecuencia === 'Anual' ? s.monto : s.monto * 12; }
+
+function subProximoCobro(s) {
+  if (!s.diaCobro) return null;
+  const hoy = new Date();
+  hoy.setHours(0, 0, 0, 0);
+  const dia = Math.min(s.diaCobro, new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0).getDate());
+  if (s.frecuencia !== 'Anual') {
+    let d = new Date(hoy.getFullYear(), hoy.getMonth(), dia);
+    if (d < hoy) d = new Date(hoy.getFullYear(), hoy.getMonth() + 1, dia);
+    return d;
+  }
+  let ancla = s.ultimoPago ? new Date(s.ultimoPago + 'T00:00:00') : new Date(hoy);
+  if (isNaN(ancla)) ancla = new Date(hoy);
+  let d = new Date(ancla.getFullYear(), ancla.getMonth(), dia);
+  while (d <= hoy) d = new Date(d.getFullYear() + 1, d.getMonth(), dia);
+  return d;
+}
+
+function subPagadaEnPeriodo(s) {
+  if (!s.ultimoPago) return false;
+  const hoy = new Date();
+  if (s.frecuencia === 'Anual') {
+    const d = new Date(s.ultimoPago + 'T00:00:00');
+    if (isNaN(d)) return false;
+    const diff = hoy.getFullYear() - d.getFullYear();
+    return diff >= 0 && (diff * 12 + (hoy.getMonth() - d.getMonth())) >= 12;
+  }
+  return s.ultimoPago.slice(0, 7) === hoy.getFullYear() + '-' + String(hoy.getMonth() + 1).padStart(2, '0');
+}
+
+function renderSuscripcionesPage() {
+  const cont = document.getElementById('suscripcionesList');
+  const resumen = document.getElementById('suscripcionesResumen');
+  if (!cont) return;
+
+  const todas = ALL_DATA.suscripciones || [];
+  const activas = todas.filter(s => s.estado === 'Activa');
+
+  // ---- Resumen ----
+  if (resumen) {
+    const mensual = activas.reduce((a, s) => a + subMensual(s), 0);
+    const anual = activas.reduce((a, s) => a + subAnual(s), 0);
+    const porCuenta = {};
+    for (const s of activas) {
+      const k = s.cuenta || 'Sin cuenta';
+      porCuenta[k] = (porCuenta[k] || 0) + subMensual(s);
+    }
+    const filas = Object.entries(porCuenta).sort((a, b) => b[1] - a[1]).map(([c, v]) =>
+      '<div class="detail-row"><span>' + escapeHtml(c) + '</span><strong>' + fmt(v) + '/mes</strong></div>'
+    ).join('');
+    resumen.innerHTML =
+      '<div class="section-title">Resumen</div>' +
+      '<div style="display:flex; gap:10px; margin-bottom:12px; flex-wrap:wrap;">' +
+        '<div style="flex:1; min-width:120px; background:var(--bg-card); border:1px solid var(--border); border-radius:12px; padding:14px;">' +
+          '<div style="font-size:11px; color:var(--text-3); text-transform:uppercase;">Total mensual</div>' +
+          '<div style="font-family:var(--font-mono); font-size:26px; font-weight:700; color:var(--gold); margin-top:4px;">' + fmt(mensual) + '</div>' +
+          '<div style="font-size:11px; color:var(--text-3);">' + activas.length + ' activas</div>' +
+        '</div>' +
+        '<div style="flex:1; min-width:120px; background:var(--bg-card); border:1px solid var(--border); border-radius:12px; padding:14px;">' +
+          '<div style="font-size:11px; color:var(--text-3); text-transform:uppercase;">Total anual</div>' +
+          '<div style="font-family:var(--font-mono); font-size:26px; font-weight:700; margin-top:4px;">' + fmt(anual) + '</div>' +
+          '<div style="font-size:11px; color:var(--text-3);">anuales prorrateadas</div>' +
+        '</div>' +
+      '</div>' +
+      (filas ? '<div class="detail-grid">' + filas + '</div>' : '');
+  }
+
+  // ---- Lista ----
+  if (todas.length === 0) {
+    cont.innerHTML = '<div class="empty"><div class="empty-icon">S</div>Sin suscripciones. Toca "+ Agregar"</div>';
+    return;
+  }
+
+  cont.innerHTML = todas.map(s => {
+    const prox = subProximoCobro(s);
+    const pagada = subPagadaEnPeriodo(s);
+    const meta = [
+      s.frecuencia === 'Anual' ? 'Anual' : 'Mensual',
+      s.diaCobro ? 'día ' + s.diaCobro : null,
+      s.cuenta || 'sin cuenta',
+      prox ? 'próx. ' + prox.toLocaleDateString('es-GT', { day: '2-digit', month: 'short' }) : null,
+    ].filter(Boolean).join(' · ');
+    const eq = s.frecuencia === 'Anual' ? '<div class="list-meta">equiv ' + fmt(subMensual(s)) + '/mes</div>' : '';
+    return '<div class="list-item" data-action="edit-suscripcion" data-id="' + s.id + '" style="cursor:pointer;' + (s.estado !== 'Activa' ? ' opacity:.55;' : '') + '">' +
+      '<div class="list-icon">S</div>' +
+      '<div class="list-info">' +
+        '<div class="list-title">' + escapeHtml(s.nombre) + (s.estado !== 'Activa' ? ' <span style="font-size:11px; color:var(--text-3);">(' + s.estado.toLowerCase() + ')</span>' : '') + '</div>' +
+        '<div class="list-meta">' + escapeHtml(meta) + '</div>' + eq +
+        (s.ultimoPago ? '<div class="list-meta">último pago ' + s.ultimoPago + '</div>' : '') +
+      '</div>' +
+      '<div style="text-align:right;">' +
+        '<div class="list-amount' + (s.frecuencia === 'Anual' ? '' : '') + '">' + fmt(s.monto) + '</div>' +
+        '<div style="font-size:10px; color:var(--text-3);">' + (s.frecuencia === 'Anual' ? 'anual' : 'mes') + '</div>' +
+      '</div>' +
+      (s.estado === 'Activa'
+        ? '<button class="text-btn" data-action="pay-suscripcion" data-id="' + s.id + '"' + (pagada ? ' style="opacity:.5"' : '') + '>' + (pagada ? 'Pagada' : 'Pagar') + '</button>'
+        : '') +
+    '</div>';
+  }).join('');
+}
+
+/* ---------- Importar detectadas ---------- */
+function suscripcionesDetectadasNoRegistradas() {
+  const norm = s => normalizarNombreSuscripcion(s).replace(/\s+/g, ' ');
+  const existentes = new Set((ALL_DATA.suscripciones || []).map(s => norm(s.nombre)));
+  return detectarSuscripciones().filter(d => {
+    const n = norm(d.nombre);
+    if (!n || existentes.has(n)) return false;
+    existentes.add(n);
+    return true;
+  });
+}
+
+function renderSugerenciasSuscripciones() {
+  const cont = document.getElementById('suscripcionesSugeridas');
+  if (!cont) return;
+  const sugerencias = suscripcionesDetectadasNoRegistradas();
+  if (sugerencias.length === 0) { cont.innerHTML = ''; return; }
+  cont.innerHTML =
+    '<div class="section" style="margin-bottom:16px;">' +
+      '<div class="section-title">Detectadas en tus movimientos · ' + sugerencias.length + '</div>' +
+      '<div class="list">' + sugerencias.map((d, i) =>
+        '<div class="list-item">' +
+          '<div class="list-icon">?</div>' +
+          '<div class="list-info">' +
+            '<div class="list-title">' + escapeHtml(d.nombre) + '</div>' +
+            '<div class="list-meta">' + d.pagos.length + ' pagos · ' + escapeHtml(fmt(d.mediana)) + ' (mediana)' +
+            (d.pagos[0] ? ' · desde ' + d.pagos[0].fecha : '') + '</div>' +
+          '</div>' +
+          '<button class="text-btn" data-action="import-suscripcion" data-idx="' + i + '">Importar</button>' +
+        '</div>').join('') +
+      '</div>' +
+    '</div>';
+}
+
+/* ---------- Modal agregar/editar ---------- */
+function abrirModalSuscripcion(id) {
+  const s = id ? (ALL_DATA.suscripciones || []).find(x => x.id === id) : null;
+  document.getElementById('suscripcionId').value = s ? s.id : '';
+  document.getElementById('suscripcionModalTitle').innerText = s ? 'Editar suscripción' : 'Nueva suscripción';
+  document.getElementById('suscripcionNombre').value = s ? s.nombre : '';
+  document.getElementById('suscripcionMonto').value = s ? s.monto : '';
+  document.getElementById('suscripcionFrecuencia').value = s ? s.frecuencia : 'Mensual';
+  document.getElementById('suscripcionDia').value = s && s.diaCobro ? s.diaCobro : '';
+  document.getElementById('suscripcionEstado').value = s ? s.estado : 'Activa';
+  document.getElementById('suscripcionNotas').value = s ? s.notas : '';
+  renderSelect('suscripcionCuenta', getOptions('Cuenta'));
+  if (s && s.cuenta) document.getElementById('suscripcionCuenta').value = s.cuenta;
+  document.getElementById('suscripcionDeleteBtn').style.display = s ? '' : 'none';
+  openModal('suscripcionModal');
+}
+
+function abrirModalPagarSuscripcion(id) {
+  const s = (ALL_DATA.suscripciones || []).find(x => x.id === id);
+  if (!s) return;
+  document.getElementById('pagarSuscripcionId').value = s.id;
+  document.getElementById('pagarSuscripcionNombre').innerText = s.nombre;
+  document.getElementById('pagarSuscripcionInfo').innerText =
+    s.frecuencia + (s.diaCobro ? ' · día ' + s.diaCobro : '') + (s.cuenta ? ' · ' + s.cuenta : '');
+  document.getElementById('pagarSuscripcionMonto').value = s.monto;
+  document.getElementById('pagarSuscripcionFecha').value = todayISO();
+  renderSelect('pagarSuscripcionCuenta', getOptions('Cuenta'));
+  if (s.cuenta) document.getElementById('pagarSuscripcionCuenta').value = s.cuenta;
+  openModal('pagarSuscripcionModal');
+}
+
+document.getElementById('suscripcionSave').addEventListener('click', async function() {
+  const btn = this;
+  const nombre = document.getElementById('suscripcionNombre').value.trim();
+  const monto = Number(document.getElementById('suscripcionMonto').value);
+  if (!nombre) return showToast('Escribe el nombre', 'error');
+  if (!monto || monto <= 0) return showToast('Escribe el monto', 'error');
+  const body = {
+    suscripcion: nombre,
+    monto,
+    frecuencia: document.getElementById('suscripcionFrecuencia').value,
+    diaCobro: document.getElementById('suscripcionDia').value || null,
+    estado: document.getElementById('suscripcionEstado').value,
+    cuenta: document.getElementById('suscripcionCuenta').value,
+    notas: document.getElementById('suscripcionNotas').value.trim(),
+  };
+  const id = document.getElementById('suscripcionId').value;
+  btn.disabled = true;
+  try {
+    await api(id ? '/api/suscripciones/' + id : '/api/suscripciones', {
+      method: id ? 'PATCH' : 'POST',
+      body: JSON.stringify(body),
+    });
+    showToast(id ? 'Suscripción actualizada' : 'Suscripción agregada', 'success');
+    closeModal('suscripcionModal');
+    await cargarTodo();
+  } catch (e) {
+    showToast('Error: ' + e.message, 'error');
+  } finally { btn.disabled = false; }
+});
+
+document.getElementById('suscripcionDeleteBtn').addEventListener('click', async function() {
+  const id = document.getElementById('suscripcionId').value;
+  if (!id) return;
+  if (!confirm('¿Eliminar esta suscripción?')) return;
+  try {
+    await api('/api/suscripciones/' + id, { method: 'DELETE' });
+    showToast('Suscripción eliminada', 'success');
+    closeModal('suscripcionModal');
+    await cargarTodo();
+  } catch (e) {
+    showToast('Error: ' + e.message, 'error');
+  }
+});
+
+document.getElementById('pagarSuscripcionSave').addEventListener('click', async function() {
+  const btn = this;
+  const id = document.getElementById('pagarSuscripcionId').value;
+  const cuenta = document.getElementById('pagarSuscripcionCuenta').value;
+  const monto = Number(document.getElementById('pagarSuscripcionMonto').value);
+  if (!cuenta) return showToast('Elige la cuenta de cobro', 'error');
+  if (!monto || monto <= 0) return showToast('Escribe el monto', 'error');
+  btn.disabled = true;
+  try {
+    await api('/api/suscripciones/' + id + '/pagar', {
+      method: 'POST',
+      body: JSON.stringify({ cuenta, monto, fecha: document.getElementById('pagarSuscripcionFecha').value || todayISO() }),
+    });
+    showToast('OK Pago registrado: ' + fmt(monto) + ' desde ' + cuenta, 'success');
+    closeModal('pagarSuscripcionModal');
+    await cargarTodo();
+  } catch (e) {
+    showToast('Error: ' + e.message, 'error');
+  } finally { btn.disabled = false; }
+});
+
+document.addEventListener('click', async (e) => {
+  const btn = e.target.closest('[data-action]');
+  if (!btn) return;
+  const action = btn.dataset.action;
+
+  if (action === 'add-suscripcion') {
+    abrirModalSuscripcion(null);
+  } else if (action === 'edit-suscripcion') {
+    e.stopPropagation();
+    abrirModalSuscripcion(btn.dataset.id);
+  } else if (action === 'pay-suscripcion') {
+    e.stopPropagation();
+    abrirModalPagarSuscripcion(btn.dataset.id);
+  } else if (action === 'import-suscripcion') {
+    e.stopPropagation();
+    const d = suscripcionesDetectadasNoRegistradas()[Number(btn.dataset.idx)];
+    if (!d) return;
+    const ultimo = d.pagos[d.pagos.length - 1];
+    const dia = ultimo ? String(ultimo.fechaDate.getDate()) : '';
+    try {
+      await api('/api/suscripciones', {
+        method: 'POST',
+        body: JSON.stringify({
+          suscripcion: d.nombre,
+          monto: d.mediana,
+          frecuencia: 'Mensual',
+          diaCobro: dia ? Number(dia) : null,
+          estado: 'Activa',
+          cuenta: '',
+          notas: 'Importado: ' + d.pagos.length + ' pagos detectados',
+        }),
+      });
+      showToast('Importada: ' + d.nombre, 'success');
+      await cargarTodo();
+    } catch (err) {
+      showToast('Error: ' + err.message, 'error');
+    }
+  }
+});
 
 /* ---------- WIDGET PROYECCIÓN SALDO (#4) ---------- */
 function renderProyeccion() {
