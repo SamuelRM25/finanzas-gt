@@ -606,8 +606,8 @@ function buildSuscripcionProps(body = {}) {
   if (suscripcion !== undefined) props['Suscripcion'] = { title: [{ text: { content: suscripcion } }] };
   if (monto !== undefined) props['Monto'] = { number: Number(monto) };
   if (frecuencia !== undefined) props['Frecuencia'] = { select: { name: frecuencia } };
-  if (diaCobro !== undefined && diaCobro !== null && diaCobro !== '')
-    props['Dia de cobro'] = { number: Number(diaCobro) };
+  if (diaCobro !== undefined)
+    props['Dia de cobro'] = (diaCobro === null || diaCobro === '') ? { number: null } : { number: Number(diaCobro) };
   if (cuenta !== undefined) props['Cuenta'] = { rich_text: cuenta ? [{ text: { content: cuenta } }] : [] };
   if (estado !== undefined) props['Estado'] = { select: { name: estado } };
   if (notas !== undefined) props['Notas'] = { rich_text: notas ? [{ text: { content: notas } }] : [] };

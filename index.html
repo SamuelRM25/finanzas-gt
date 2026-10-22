@@ -4965,6 +4965,22 @@ function renderSuscripciones() {
    APARTADO SUSCRIPCIONES
    ============================================ */
 function normalizarSuscripcion(p) {
+  p = p || {};
+  // Formato plano devuelto por /api/suscripciones
+  if (!p.properties && p.suscripcion !== undefined) {
+    return {
+      id: p.id,
+      nombre: p.suscripcion || '?',
+      monto: Number(p.monto) || 0,
+      frecuencia: p.frecuencia || 'Mensual',
+      diaCobro: p.diaCobro ?? null,
+      cuenta: p.cuenta || '',
+      estado: p.estado || 'Activa',
+      ultimoPago: p.ultimoPago || null,
+      notas: p.notas || '',
+    };
+  }
+  // Formato crudo de Notion (page.properties)
   const pr = p.properties || p;
   return {
     id: p.id,
