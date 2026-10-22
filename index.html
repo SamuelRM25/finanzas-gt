@@ -1311,6 +1311,17 @@ mark.search-highlight { background: rgba(251, 191, 36, 0.3); color: var(--text-1
       </div>
     </div>
 
+    <div class="section" id="suscripcionesResumenSection" style="display:none;">
+      <div class="section-header">
+        <div>
+          <div class="section-eyebrow">Gastos fijos</div>
+          <div class="section-title">Suscripciones</div>
+        </div>
+        <button class="text-btn" data-go="suscripciones">Ver todas →</button>
+      </div>
+      <div id="dashboardSuscripcionesResumen"></div>
+    </div>
+
     <div class="section" id="suscripcionesSection" style="display:none;">
       <div class="section-header">
         <div>
@@ -3144,6 +3155,7 @@ async function cargarTodo() {
   renderProximasCuotas();
   renderProyeccion();
   renderSuscripciones();
+  renderDashboardSuscripciones();
 }
 
 async function loadMovimientos() {
@@ -5024,6 +5036,53 @@ function subPagadaEnPeriodo(s) {
     return diff >= 0 && (diff * 12 + (hoy.getMonth() - d.getMonth())) >= 12;
   }
   return s.ultimoPago.slice(0, 7) === hoy.getFullYear() + '-' + String(hoy.getMonth() + 1).padStart(2, '0');
+}
+
+function renderDashboardSuscripciones() {
+  const section = document.getElementById('suscripcionesResumenSection');
+  const cont = document.getElementById('dashboardSuscripcionesResumen');
+  if (!section || !cont) return;
+  const todas = ALL_DATA.suscripciones || [];
+  const activas = todas.filter(s => s.estado === 'Activa');
+  if (activas.length === 0) { section.style.display = 'none'; return; }
+  section.style.display = '';
+
+  const mensual = activas.reduce((a, s) => a + subMensual(s), 0);
+  const anual = activas.reduce((a, s) => a + subAnual(s), 0);
+
+  const proximos = activas
+    .map(s => ({ s, d: subProximoCobro(s) }))
+    .filter(x => x.d)
+    .sort((a, b) => a.d - b.d)
+    .slice(0, 3);
+
+  const chips = proximos.map(({ s, d }) => {
+    const dias = Math.ceil((d - new Date(new Date().toDateString())) / 86400000);
+    const cuando = dias <= 0 ? 'hoy' : dias === 1 ? 'mañana' : 'en ' + dias + ' días';
+    return '<div class="suscripcion-item" style="cursor:pointer;" data-action="pay-suscripcion" data-id="' + s.id + '">' +
+      '<div class="suscripcion-icon">S</div>' +
+      '<div class="suscripcion-info">' +
+        '<div class="suscripcion-name">' + escapeHtml(s.nombre) + '</div>' +
+        '<div class="suscripcion-meta">' + escapeHtml(s.cuenta || 'sin cuenta') + ' · ' + cuando + '</div>' +
+      '</div>' +
+      '<span class="suscripcion-amount">' + fmt(s.monto) + '</span>' +
+    '</div>';
+  }).join('');
+
+  cont.innerHTML =
+    '<div style="display:flex; gap:10px; margin-bottom:12px; flex-wrap:wrap;">' +
+      '<div style="flex:1; min-width:120px; background:var(--bg-card); border:1px solid var(--border); border-radius:12px; padding:14px;">' +
+        '<div style="font-size:11px; color:var(--text-3); text-transform:uppercase;">Total mensual</div>' +
+        '<div style="font-family:var(--font-mono); font-size:26px; font-weight:700; color:var(--gold); margin-top:4px;">' + fmt(mensual) + '</div>' +
+        '<div style="font-size:11px; color:var(--text-3);">' + activas.length + ' activa' + (activas.length === 1 ? '' : 's') + '</div>' +
+      '</div>' +
+      '<div style="flex:1; min-width:120px; background:var(--bg-card); border:1px solid var(--border); border-radius:12px; padding:14px;">' +
+        '<div style="font-size:11px; color:var(--text-3); text-transform:uppercase;">Total anual</div>' +
+        '<div style="font-family:var(--font-mono); font-size:26px; font-weight:700; margin-top:4px;">' + fmt(anual) + '</div>' +
+        '<div style="font-size:11px; color:var(--text-3);">lo que pagas al año</div>' +
+      '</div>' +
+    '</div>' +
+    (chips ? '<div>' + chips + '</div>' : '');
 }
 
 function renderSuscripcionesPage() {
