@@ -233,7 +233,37 @@ input, select, textarea { font-family: inherit; }
   border-bottom: 1px solid var(--border);
   padding: calc(12px + var(--safe-top)) 16px 12px;
   display: flex; align-items: center; justify-content: space-between;
+  flex-wrap: wrap;
   gap: 12px;
+}
+
+.money-bar {
+  flex-basis: 100%;
+  display: flex; align-items: baseline; gap: 8px;
+  padding: 8px 12px;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+}
+.money-bar:hover { background: var(--bg-3); border-color: var(--jade-dim); }
+.money-bar-label {
+  font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--text-dim);
+}
+.money-bar-amount {
+  font-family: var(--font-mono);
+  font-size: 17px; font-weight: 700;
+  color: var(--jade-bright);
+}
+.money-bar-sub {
+  margin-left: auto;
+  font-size: 10px;
+  color: var(--text-3);
+  white-space: nowrap;
 }
 
 .brand {
@@ -1197,6 +1227,11 @@ mark.search-highlight { background: rgba(251, 191, 36, 0.3); color: var(--text-1
       <button class="icon-btn" id="searchBtn" title="Buscar (Ctrl/Cmd + K)">Q</button>
       <button class="icon-btn" id="refreshBtn" title="Actualizar">↻</button>
     </div>
+    <button class="money-bar" id="moneyBar" data-go="cuentas" title="Ver cuentas">
+      <span class="money-bar-label">Disponible</span>
+      <span class="money-bar-amount" id="moneyBarAmount">Q0.00</span>
+      <span class="money-bar-sub" id="moneyBarSub">—</span>
+    </button>
   </header>
 
   <!-- ============ DASHBOARD ============ -->
@@ -2465,7 +2500,7 @@ const escapeHtml = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&l
 
 /* ---------- STATE ---------- */
 let ALL_OPTIONS = {}; // { dbId: { field: [options] } }
-let ALL_DATA = { movimientos: [], presupuestos: [], metas: [], prestamos: [], visacuotas: [], tarjetas: [], suscripciones: [] };
+let ALL_DATA = { movimientos: [], movimientosTodos: [], presupuestos: [], metas: [], prestamos: [], visacuotas: [], tarjetas: [], suscripciones: [] };
 let SETTINGS = { exchangeRate: 7.8, rememberSession: true };
 
 /* ---------- AUTH ---------- */
@@ -3139,6 +3174,13 @@ document.getElementById('submitMovimiento').addEventListener('click', async () =
 });
 
 /* ---------- DATA LOADERS ---------- */
+// Refresco silencioso: no interrumpe formularios abiertos ni corre en segundo plano
+function refreshSilencioso() {
+  if (document.hidden) return;
+  if (document.querySelector('.modal-overlay.show')) return;
+  cargarTodo();
+}
+
 async function cargarTodo() {
   document.getElementById('monthPill').textContent = MESES[new Date().getMonth()] + ' ' + new Date().getFullYear();
   await Promise.all([
@@ -3149,8 +3191,13 @@ async function cargarTodo() {
     loadVisacuotas().catch(e => console.error(e)),
     loadTarjetas().catch(e => console.error(e)),
     loadSuscripciones().catch(e => console.error(e)),
+    loadMovimientosTodos().catch(e => console.error(e)),
   ]);
   actualizarStats();
+  renderMoneyBar();
+  if (document.getElementById('page-cuentas')?.classList.contains('active')) {
+    renderCuentasCompleto();
+  }
   renderDashboardExtras();
   renderProximasCuotas();
   renderProyeccion();
@@ -3162,6 +3209,12 @@ async function loadMovimientos() {
   const res = await api('/api/movements');
   ALL_DATA.movimientos = res.results || [];
   renderMovimientos();
+}
+
+// Historial completo: los saldos de las cuentas NO dependen del mes
+async function loadMovimientosTodos() {
+  const res = await api('/api/movements?all=1');
+  ALL_DATA.movimientosTodos = res.results || [];
 }
 
 async function loadPresupuestos() {
@@ -3247,7 +3300,7 @@ function actualizarStats() {
   animateCounter(document.getElementById('ingresosAmount'), ingresos, 1000, fmtShort);
   animateCounter(document.getElementById('gastosAmount'), gastos, 1000, fmtShort);
   document.getElementById('balanceSubtitle').textContent = `${ALL_DATA.movimientos.length} movimientos este mes`;
-  renderCuentas(porCuenta);
+  renderCuentas(calcularBalancesCuentas().porCuenta);
   document.querySelector('.page-title').textContent = 'Hola, ' + (new Date().getHours() < 12 ? 'buenos días' : new Date().getHours() < 19 ? 'buenas tardes' : 'buenas noches');
 }
 
@@ -3260,7 +3313,7 @@ function renderCuentas(porCuenta) {
     .filter(([name]) => !tcNombres.has(name) && !metaNombres.has(name))
     .sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]));
   const grid = document.getElementById('cuentasGrid');
-  if (entries.length === 0) { grid.innerHTML = '<div class="empty">Sin datos este mes</div>'; return; }
+  if (entries.length === 0) { grid.innerHTML = '<div class="empty">Sin cuentas</div>'; return; }
   const showCount = window.innerWidth > 768 ? 6 : 4;
   grid.innerHTML = entries.slice(0, showCount).map(([name, bal]) => renderAccountCard(name, bal)).join('');
 }
@@ -3278,9 +3331,12 @@ function renderAccountCard(name, bal) {
   `;
 }
 
-function renderCuentasCompleto() {
+function calcularBalancesCuentas() {
   const porCuenta = {};
-  for (const m of ALL_DATA.movimientos) {
+  const fuente = (ALL_DATA.movimientosTodos && ALL_DATA.movimientosTodos.length)
+    ? ALL_DATA.movimientosTodos
+    : ALL_DATA.movimientos;
+  for (const m of fuente) {
     const cuenta = props(m.properties, 'Cuenta', '');
     const signo = props(m.properties, 'Signo', 0);
     if (cuenta) porCuenta[cuenta] = (porCuenta[cuenta] || 0) + signo;
@@ -3295,15 +3351,34 @@ function renderCuentasCompleto() {
     .filter(([name]) => !tcNombres.has(name) && !metaNombres.has(name))
     .sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]));
 
+  const total = entries.reduce((acc, [, bal]) => acc + bal, 0);
+  return { entries, total, porCuenta };
+}
+
+function renderMoneyBar() {
+  const amount = document.getElementById('moneyBarAmount');
+  const sub = document.getElementById('moneyBarSub');
+  if (!amount) return;
+  const { entries, total } = calcularBalancesCuentas();
+  amount.textContent = fmt(total);
+  if (sub) {
+    sub.textContent = entries.length + ' cuenta' + (entries.length === 1 ? '' : 's') + ' · al día';
+  }
+}
+
+function renderCuentasCompleto() {
+  const { entries } = calcularBalancesCuentas();
+
   const grid = document.getElementById('cuentasAllGrid');
   if (entries.length === 0) {
-    grid.innerHTML = '<div class="empty">Sin datos este mes</div>';
+    grid.innerHTML = '<div class="empty">Sin cuentas</div>';
   } else {
     grid.innerHTML = entries.map(([name, bal]) => renderAccountCard(name, bal)).join('');
   }
 
   // Renderizar TCs con saldo dinámico
   renderTarjetas();
+  renderMoneyBar();
 }
 
 function renderTarjetas() {
@@ -6031,7 +6106,11 @@ async function init() {
   await loadOptions();
   setMovimientoType('expense');
   await cargarTodo();
-  setInterval(cargarTodo, 60000);
+  setInterval(refreshSilencioso, 60000);
+  document.addEventListener('visibilitychange', function() {
+    if (!document.hidden) refreshSilencioso();
+  });
+  window.addEventListener('focus', refreshSilencioso);
   setInterval(checkUpcomingNotifications, 5 * 60 * 1000);
   setTimeout(function() {
     if (Notification && Notification.permission === 'default') {

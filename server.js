@@ -326,7 +326,19 @@ app.post('/api/options', checkAuth, async (req, res) => {
 app.get('/api/movements', checkAuth, async (req, res) => {
   if (!NOTION_TOKEN) return res.status(500).json({ error: 'NOTION_TOKEN not set' });
   try {
-    const { month } = req.query;
+    const { month, all } = req.query;
+
+    // ?all=1 → historial completo (para saldos reales por cuenta)
+    if (all === '1' || all === 'true') {
+      const data = await queryDatabase(
+        IDS.dataSourceMov,
+        {},
+        [{ property: 'Fecha', direction: 'descending' }],
+        200
+      );
+      return res.json(data);
+    }
+
     let start, end;
     if (month && /^\d{4}-\d{2}$/.test(month)) {
       const [y, m] = month.split('-').map(Number);
