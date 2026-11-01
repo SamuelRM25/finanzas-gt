@@ -871,12 +871,7 @@ app.patch('/api/visacuotas/:id', checkAuth, async (req, res) => {
 // ============================================
 async function loadTarjetas() {
   try {
-    const r = await notionFetch(`/data_sources/${IDS.dataSourceTarjetas}/query`, {
-      method: 'POST',
-      body: JSON.stringify({ page_size: 50 }),
-    });
-    if (!r.ok) return [];
-    const data = await r.json();
+    const data = await queryDatabase(IDS.dataSourceTarjetas, {}, [], 50);
     return (data.results || []).map(p => ({
       id: p.id,
       name: p.properties?.Name?.title?.[0]?.plain_text || p.properties?.Name?.title?.[0]?.text?.content || '',
@@ -886,12 +881,115 @@ async function loadTarjetas() {
       saldoActual: p.properties?.['Saldo actual']?.number || 0,
       limite: p.properties?.['Límite de crédito']?.number || 0,
       notas: p.properties?.Notas?.rich_text?.[0]?.plain_text || '',
+      autoCorte: p.properties?.['Auto corte']?.checkbox !== false,
+      ultimoCorteAplicado: p.properties?.['Ultimo corte aplicado']?.date?.start || null,
     }));
   } catch (e) { return []; }
 }
 
+// ============================================
+// CORTES AUTOMATICOS DE TARJETA
+// En cada fecha de corte se resta a la deuda de la TC el total de
+// cuotas mensuales de sus visacuotas activas, y cada visacuota avanza.
+// ============================================
+function soloFecha(d) {
+  const x = new Date(d);
+  x.setHours(0, 0, 0, 0);
+  return x;
+}
+
+// Devuelve la ocurrencia de corte mas reciente (hoy o antes) para un dia de corte
+function ultimaFechaCorte(fechaCorte, hoy = new Date()) {
+  if (!fechaCorte) return null;
+  const base = new Date(fechaCorte + 'T00:00:00');
+  if (isNaN(base)) return null;
+  const dia = base.getDate();
+  const hoyN = soloFecha(hoy);
+  const y = hoyN.getFullYear();
+  const m = hoyN.getMonth();
+  const ultimoDiaEsteMes = new Date(y, m + 1, 0).getDate();
+  const esteMes = new Date(y, m, Math.min(dia, ultimoDiaEsteMes));
+  if (esteMes <= hoyN) return esteMes;
+  const ultimoDiaMesAnterior = new Date(y, m, 0).getDate();
+  return new Date(y, m - 1, Math.min(dia, ultimoDiaMesAnterior));
+}
+
+async function procesarCortesTc() {
+  const tarjetas = await loadTarjetas();
+  const aplicados = [];
+
+  for (const t of tarjetas) {
+    if (!t.name || !t.fechaCorte) continue;
+    if (t.autoCorte === false) continue;
+
+    const corte = ultimaFechaCorte(t.fechaCorte);
+    if (!corte) continue;
+    const corteISO = corte.toISOString().split('T')[0];
+
+    // Ya se aplico este corte (o uno posterior)
+    if (t.ultimoCorteAplicado && t.ultimoCorteAplicado >= corteISO) continue;
+
+    const visQ = await queryDatabase(IDS.dataSourceVisa, {
+      property: 'Tarjeta',
+      rich_text: { contains: t.name },
+    });
+
+    const vis = (visQ.results || []).filter(v => {
+      const p = v.properties;
+      const pagadas = p['Cuotas pagadas']?.number || 0;
+      const totales = p['Cuotas totales']?.number || 0;
+      const estado = p.Estado?.select?.name || '';
+      const compra = p['Fecha compra']?.date?.start;
+      if (estado === 'Pagada' || pagadas >= totales) return false;
+      if (compra && compra > corteISO) return false; // comprada despues del corte
+      return true;
+    });
+
+    const suma = vis.reduce((a, v) => a + (v.properties['Cuota mensual']?.formula?.number || 0), 0);
+    const sumaRed = Math.round(suma * 100) / 100;
+    const saldoAnterior = Number(t.saldoActual) || 0;
+    const saldoNuevo = Math.max(0, Math.round((saldoAnterior - sumaRed) * 100) / 100);
+
+    // Avanzar cada visacuota vinculada
+    for (const v of vis) {
+      const p = v.properties;
+      const pagadas = p['Cuotas pagadas']?.number || 0;
+      const totales = p['Cuotas totales']?.number || 0;
+      const nuevas = Math.min(totales, pagadas + 1);
+      const props = { 'Cuotas pagadas': { number: nuevas } };
+      if (nuevas >= totales) props.Estado = { select: { name: 'Pagada' } };
+      await updatePage(v.id, props);
+    }
+
+    // Restar a la deuda de la tarjeta y marcar el corte como aplicado
+    await updatePage(t.id, {
+      'Saldo actual': { number: saldoNuevo },
+      'Ultimo corte aplicado': { date: { start: corteISO } },
+    });
+
+    aplicados.push({
+      tarjeta: t.name,
+      corte: corteISO,
+      visacuotas: vis.length,
+      aplicado: sumaRed,
+      saldoAnterior,
+      saldoNuevo,
+      topeado: sumaRed > saldoAnterior,
+    });
+  }
+
+  return aplicados;
+}
+
+let ultimaRevisionCortes = 0;
+
 app.get('/api/tarjetas', checkAuth, async (req, res) => {
   try {
+    // Revisar cortes vencidos al abrir la app (maximo una vez por hora)
+    if (Date.now() - ultimaRevisionCortes > 60 * 60 * 1000) {
+      ultimaRevisionCortes = Date.now();
+      try { await procesarCortesTc(); } catch (e) { console.error('Cortes TC:', e.message); }
+    }
     const tarjetas = await loadTarjetas();
     res.json({ results: tarjetas });
   } catch (e) {
@@ -899,9 +997,18 @@ app.get('/api/tarjetas', checkAuth, async (req, res) => {
   }
 });
 
+app.post('/api/tarjetas/procesar-cortes', checkAuth, async (req, res) => {
+  try {
+    const aplicados = await procesarCortesTc();
+    res.json({ ok: true, aplicados });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.post('/api/tarjetas', checkAuth, async (req, res) => {
   try {
-    const { name, banco, fechaPago, fechaCorte, saldoActual, limite, notas } = req.body || {};
+    const { name, banco, fechaPago, fechaCorte, saldoActual, limite, notas, autoCorte } = req.body || {};
     if (!name) return res.status(400).json({ error: 'name requerido' });
     const props = {
       Name: { title: [{ text: { content: name } }] },
@@ -910,6 +1017,7 @@ app.post('/api/tarjetas', checkAuth, async (req, res) => {
       'Fecha corte': fechaCorte ? { date: { start: fechaCorte } } : undefined,
       'Saldo actual': { number: Number(saldoActual) || 0 },
       'Límite de crédito': { number: Number(limite) || 0 },
+      'Auto corte': { checkbox: autoCorte !== false },
       Notas: notas ? { rich_text: [{ text: { content: notas } }] } : undefined,
     };
     const r = await notionFetch('/pages', {
@@ -933,7 +1041,7 @@ app.post('/api/tarjetas', checkAuth, async (req, res) => {
 app.patch('/api/tarjetas/:id', checkAuth, async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, banco, fechaPago, fechaCorte, saldoActual, limite, notas } = req.body || {};
+    const { name, banco, fechaPago, fechaCorte, saldoActual, limite, notas, autoCorte } = req.body || {};
     const props = {};
     if (name !== undefined) props.Name = { title: [{ text: { content: name } }] };
     if (banco !== undefined) props.Banco = { rich_text: [{ text: { content: banco } }] };
@@ -942,6 +1050,7 @@ app.patch('/api/tarjetas/:id', checkAuth, async (req, res) => {
     if (saldoActual !== undefined) props['Saldo actual'] = { number: Number(saldoActual) || 0 };
     if (limite !== undefined) props['Límite de crédito'] = { number: Number(limite) || 0 };
     if (notas !== undefined) props.Notas = { rich_text: [{ text: { content: notas } }] };
+    if (autoCorte !== undefined) props['Auto corte'] = { checkbox: !!autoCorte };
     await updatePage(id, props);
     res.json({ ok: true });
   } catch (e) {
@@ -1505,4 +1614,16 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`MiFinanza on port ${PORT}`);
   console.log(`   TOKEN: ${NOTION_TOKEN ? 'OK' : 'MISSING'}`);
   console.log(`   PASSWORD: ${APP_PASSWORD ? 'set' : 'open'}`);
+
+  // Cortes de tarjeta: revisar al arrancar y cada 6 horas
+  setTimeout(() => {
+    procesarCortesTc()
+      .then(r => { if (r.length) console.log('Cortes TC aplicados:', JSON.stringify(r)); })
+      .catch(e => console.error('Cortes TC:', e.message));
+  }, 10000);
+  setInterval(() => {
+    procesarCortesTc()
+      .then(r => { if (r.length) console.log('Cortes TC aplicados:', JSON.stringify(r)); })
+      .catch(e => console.error('Cortes TC:', e.message));
+  }, 6 * 60 * 60 * 1000);
 });
