@@ -1061,7 +1061,11 @@ app.patch('/api/tarjetas/:id', checkAuth, async (req, res) => {
 app.delete('/api/tarjetas/:id', checkAuth, async (req, res) => {
   try {
     const { id } = req.params;
-    const r = await notionFetch(`/pages/${id}`, { method: 'DELETE' });
+    // Notion archiva con PATCH in_trash; DELETE /pages no es válido
+    const r = await notionFetch(`/pages/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ in_trash: true }),
+    });
     if (!r.ok) {
       const text = await r.text();
       throw new Error(`Notion ${r.status}: ${text}`);
