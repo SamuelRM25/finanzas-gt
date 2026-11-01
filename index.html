@@ -3154,7 +3154,10 @@ document.getElementById('submitMovimiento').addEventListener('click', async () =
   if (currentType === 'transfer' || currentType === 'tc') payload.cuentaDestino = destino;
 
   try {
-    await api('/api/movements', { method: 'POST', body: JSON.stringify(payload) });
+    const res = await api('/api/movements', { method: 'POST', body: JSON.stringify(payload) });
+    if (!res || res.ok !== true || !res.id) {
+      throw new Error((res && res.error) || 'El servidor no confirmó el guardado');
+    }
     const msg = currentType === 'transfer'
       ? `OK Transferido ${fmt(monto, currentMoneda)} de ${cuenta} → ${destino}`
       : currentType === 'tc'

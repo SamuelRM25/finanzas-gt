@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mifinanza-v4';
+const CACHE_NAME = 'mifinanza-v5';
 const ASSETS = [
   '/',
   '/index.html',
@@ -36,6 +36,10 @@ self.addEventListener('fetch', (e) => {
   // Solo http/https: extensiones (chrome-extension://) y data: no son cacheables
   if (url.protocol !== 'http:' && url.protocol !== 'https:') return;
 
+  // Nunca interceptar escrituras: un POST/PATCH/DELETE que falle debe fallar
+  // de verdad en la app, jamás devolver una respuesta falsa "exitosa".
+  if (e.request.method !== 'GET') return;
+
   // API: network-first, fallback to cache
   if (url.pathname.startsWith('/api/')) {
     e.respondWith(
@@ -44,7 +48,10 @@ self.addEventListener('fetch', (e) => {
           if (r.ok) cacheSafe(e.request, r.clone());
           return r;
         })
-        .catch(() => caches.match(e.request).then((r) => r || new Response(JSON.stringify({ error: 'offline' }), { headers: { 'Content-Type': 'application/json' } })))
+        .catch(() => caches.match(e.request).then((r) => r || new Response(
+          JSON.stringify({ error: 'Sin conexión con el servidor' }),
+          { status: 503, headers: { 'Content-Type': 'application/json' } }
+        )))
     );
     return;
   }
