@@ -3432,14 +3432,16 @@ function renderTarjetas() {
   grid.innerHTML = tarjetas.map(function(t) {
     const deuda = deudaPorTc[t.name] || 0;
     const tieneLimite = (t.limite || 0) > 0;
-    const disponible = tieneLimite ? (t.limite - t.saldoActual) : 0;
-    const utilizacion = tieneLimite ? (t.saldoActual / t.limite) * 100 : 0;
+    // El crédito disponible descuenta la deuda de la TC y también las visacuotas pendientes
+    const deudaTotal = (t.saldoActual || 0) + deuda;
+    const disponible = tieneLimite ? Math.max(0, t.limite - deudaTotal) : 0;
+    const utilizacion = tieneLimite ? (deudaTotal / t.limite) * 100 : 0;
     const fechaPago = t.fechaPago ? new Date(t.fechaPago + 'T00:00:00').toLocaleDateString('es-GT', { day: 'numeric', month: 'short' }) : '—';
     const fechaCorte = t.fechaCorte ? new Date(t.fechaCorte + 'T00:00:00').toLocaleDateString('es-GT', { day: 'numeric', month: 'short' }) : '—';
     const proxFecha = proximaFechaCorte(t.fechaCorte);
     const proxCorte = proxFecha ? proxFecha.toLocaleDateString('es-GT', { day: 'numeric', month: 'short' }) : null;
     const ultimoCorte = t.ultimoCorteAplicado ? new Date(t.ultimoCorteAplicado + 'T00:00:00').toLocaleDateString('es-GT', { day: 'numeric', month: 'short' }) : null;
-    const balanceClass = t.saldoActual > 0 ? 'negative' : 'positive';
+    const balanceClass = deudaTotal > 0 ? 'negative' : 'positive';
     const balanceLabel = tieneLimite ? 'Disponible' : 'Saldo actual';
     const balanceValue = tieneLimite ? disponible : t.saldoActual;
     let limitBar = '';
@@ -3744,6 +3746,20 @@ document.addEventListener('click', async (e) => {
     openModal('aporteMetaModal');
     setTimeout(() => document.getElementById('aporteMetaMonto').focus(), 100);
   }
+  if (action === 'finalizar-meta') {
+    const id = e.target.closest('[data-id]').dataset.id;
+    const nombre = e.target.closest('[data-id]').dataset.nombre || 'esta meta';
+    if (!confirm('Finalizar la meta "' + nombre + '" y eliminarla? El dinero ahorrado no se modifica.')) return;
+    try {
+      await api('/api/metas/' + id, { method: 'DELETE' });
+      closeModal('metaDetailModal');
+      showToast('Meta finalizada', 'success');
+      await cargarTodo();
+    } catch (err) {
+      showToast('No se pudo finalizar: ' + err.message, 'error');
+    }
+    return;
+  }
   if (action === 'view-meta') {
     const id = e.target.closest('[data-id]').dataset.id;
     const meta = ALL_DATA.metas.find(m => m.id === id);
@@ -3779,6 +3795,7 @@ document.addEventListener('click', async (e) => {
         (notas ? '<div class="detail-row"><span>Notas</span><strong>' + escapeHtml(notas) + '</strong></div>' : '') +
       '</div>' +
       '<div class="form-actions" style="margin-top: 16px;">' +
+        '<button class="btn-secondary" data-action="finalizar-meta" data-id="' + meta.id + '" data-nombre="' + escapeHtml(nombre) + '" style="background: var(--coral-dim); color: var(--coral);">Finalizar</button>' +
         '<button class="btn-secondary" data-action="add-money-meta" data-id="' + meta.id + '" data-nombre="' + escapeHtml(nombre) + '" data-close="metaDetailModal">+ Aportar</button>' +
         '<button class="btn-primary" data-close="metaDetailModal">Cerrar</button>' +
       '</div>';

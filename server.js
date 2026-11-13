@@ -483,10 +483,79 @@ async function updatePage(pageId, properties) {
 // ============================================
 // PRESUPUESTOS
 // ============================================
+// ============================================
+// REINICIO MENSUAL DE PRESUPUESTOS
+// Al empezar un mes nuevo: Monto pagado = 0, Estado = Pendiente,
+// Mes y Fecha limite se mueven al mes en curso.
+// ============================================
+function ymActual() {
+  // Mes calendario en Guatemala (Render corre en UTC)
+  const partes = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Guatemala', year: 'numeric', month: '2-digit',
+  }).formatToParts(new Date());
+  const val = (t) => partes.find(p => p.type === t)?.value;
+  return `${val('year')}-${val('month')}`;
+}
+
+async function reiniciarPresupuestosMes() {
+  const data = await queryDatabase(IDS.dataSourcePres, {}, [], 100);
+  const ym = ymActual();
+  const [anio, mesNum] = ym.split('-').map(Number);
+  const reiniciados = [];
+
+  for (const p of data.results || []) {
+    const pr = p.properties;
+    const mes = pr['Mes']?.date?.start;
+    if (!mes) continue;
+    if (mes.slice(0, 7) >= ym) continue; // ya está en el mes actual o es futuro
+
+    const props = {
+      'Mes': { date: { start: `${ym}-01` } },
+      'Monto pagado': { number: 0 },
+      'Estado': { select: { name: 'Pendiente' } },
+    };
+
+    // Mover la fecha límite al mismo día de este mes
+    const fl = pr['Fecha limite']?.date?.start;
+    if (fl) {
+      const dia = Number(fl.slice(8, 10)) || 1;
+      const ultimoDia = new Date(anio, mesNum, 0).getDate();
+      props['Fecha limite'] = { date: { start: `${ym}-${String(Math.min(dia, ultimoDia)).padStart(2, '0')}` } };
+    }
+
+    await updatePage(p.id, props);
+    reiniciados.push({
+      id: p.id,
+      categoria: pr.Categoria?.title?.[0]?.plain_text || '?',
+    });
+  }
+
+  return reiniciados;
+}
+
+let ultimaRevisionPresupuestos = 0;
+
 app.get('/api/presupuestos', checkAuth, async (req, res) => {
   try {
+    // Reiniciar al abrir la app (máximo una vez por hora)
+    if (Date.now() - ultimaRevisionPresupuestos > 60 * 60 * 1000) {
+      ultimaRevisionPresupuestos = Date.now();
+      try {
+        const r = await reiniciarPresupuestosMes();
+        if (r.length) console.log('Presupuestos reiniciados:', JSON.stringify(r));
+      } catch (e) { console.error('Reinicio presupuestos:', e.message); }
+    }
     const data = await queryDatabase(IDS.dataSourcePres, {}, [], 50);
     res.json(data);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post('/api/presupuestos/reiniciar', checkAuth, async (req, res) => {
+  try {
+    const reiniciados = await reiniciarPresupuestosMes();
+    res.json({ ok: true, reiniciados });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
@@ -582,6 +651,19 @@ app.patch('/api/metas/:id', checkAuth, async (req, res) => {
 
     const page = await updatePage(id, props);
     res.json({ ok: true, id: page.id, nuevoAhorrado: props.Ahorrado?.number });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.delete('/api/metas/:id', checkAuth, async (req, res) => {
+  try {
+    const r = await notionFetch(`/pages/${req.params.id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ in_trash: true }),
+    });
+    if (!r.ok) throw new Error(`Notion ${r.status}: ${await r.text()}`);
+    res.json({ ok: true });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
@@ -1611,23 +1693,45 @@ app.get('/sw.js', (req, res) => {
   res.sendFile(path.join(__dirname, 'sw.js'));
 });
 
+// Health (antes del 404 para que el keep-alive reciba 200)
+app.get('/api/health', (req, res) => {
+  res.json({ ok: true, ts: Date.now(), uptime: Math.round(process.uptime()) });
+});
+
 // 404
 app.use((req, res) => res.status(404).json({ error: 'Not found' }));
+
+const KEEPALIVE_MS = 10 * 60 * 1000; // cada 10 minutos
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`MiFinanza on port ${PORT}`);
   console.log(`   TOKEN: ${NOTION_TOKEN ? 'OK' : 'MISSING'}`);
   console.log(`   PASSWORD: ${APP_PASSWORD ? 'set' : 'open'}`);
 
-  // Cortes de tarjeta: revisar al arrancar y cada 6 horas
-  setTimeout(() => {
-    procesarCortesTc()
-      .then(r => { if (r.length) console.log('Cortes TC aplicados:', JSON.stringify(r)); })
-      .catch(e => console.error('Cortes TC:', e.message));
-  }, 10000);
-  setInterval(() => {
-    procesarCortesTc()
-      .then(r => { if (r.length) console.log('Cortes TC aplicados:', JSON.stringify(r)); })
-      .catch(e => console.error('Cortes TC:', e.message));
-  }, 6 * 60 * 60 * 1000);
+  const revisar = async (etiqueta) => {
+    try {
+      const cortes = await procesarCortesTc();
+      if (cortes.length) console.log(`Cortes TC aplicados (${etiqueta}):`, JSON.stringify(cortes));
+    } catch (e) { console.error('Cortes TC:', e.message); }
+
+    try {
+      const pres = await reiniciarPresupuestosMes();
+      if (pres.length) console.log(`Presupuestos reiniciados (${etiqueta}):`, JSON.stringify(pres));
+    } catch (e) { console.error('Reinicio presupuestos:', e.message); }
+  };
+
+  // Revisar al arrancar y cada 6 horas
+  setTimeout(() => revisar('arranque'), 10000);
+  setInterval(() => revisar('6h'), 6 * 60 * 60 * 1000);
+
+  // Keep-alive: ping al propio servicio cada 10 min para que Render no lo duerma
+  const autoUrl = process.env.RENDER_EXTERNAL_URL || 'https://finanzas-gt.onrender.com';
+  const ping = () => {
+    fetch(`${autoUrl}/api/health`)
+      .then(r => r.json())
+      .then(() => console.log(`Keep-alive OK ${new Date().toISOString()}`))
+      .catch(e => console.error('Keep-alive fallo:', e.message));
+  };
+  setTimeout(ping, 60000);
+  setInterval(ping, KEEPALIVE_MS);
 });
