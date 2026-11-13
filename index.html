@@ -417,6 +417,7 @@ input, select, textarea { font-family: inherit; }
   margin-bottom: 16px;
 }
 .stat-pill {
+  width: 100%;
   background: var(--bg-1);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
@@ -424,8 +425,22 @@ input, select, textarea { font-family: inherit; }
   display: flex;
   align-items: center;
   gap: 12px;
-  transition: transform 0.2s;
+  text-align: left;
+  cursor: pointer;
+  transition: transform 0.2s, background 0.2s, border-color 0.2s;
 }
+.stat-pill:hover { background: var(--bg-2); border-color: var(--border-strong); }
+.stat-pill:active { transform: scale(0.99); }
+.stat-pill:focus-visible { outline: 2px solid var(--jade); outline-offset: 2px; }
+.stat-pill-chevron {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 20px;
+  line-height: 1;
+  color: var(--text-faint);
+  transition: transform 0.2s, color 0.2s;
+}
+.stat-pill:hover .stat-pill-chevron { transform: translateX(2px); color: var(--text-dim); }
 .stat-pill-icon {
   width: 36px; height: 36px;
   border-radius: var(--radius-sm);
@@ -956,6 +971,11 @@ input, select, textarea { font-family: inherit; }
 .modal-overlay.show { display: flex; }
 @media (min-width: 600px) {
   .modal-overlay { align-items: center; }
+  .modal {
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-xl);
+    padding-bottom: 20px;
+  }
 }
 .modal {
   width: 100%;
@@ -1041,6 +1061,91 @@ mark.search-highlight { background: rgba(251, 191, 36, 0.3); color: var(--text-1
   border-radius: 999px;
   margin: 0 auto 16px;
 }
+
+/* ---------- MODAL: DESGLOSE DE INGRESOS / GASTOS ---------- */
+.desglose-switch {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  padding: 4px;
+  margin-bottom: 22px;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+.desglose-switch button {
+  padding: 9px 12px;
+  border-radius: 7px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-dim);
+  transition: background 0.2s, color 0.2s;
+}
+.desglose-switch button.active { background: var(--bg-3); color: var(--text); box-shadow: var(--shadow-sm); }
+.desglose-switch button[data-tipo="gasto"].active { background: var(--coral-glow); color: var(--coral-bright); }
+.desglose-switch button[data-tipo="ingreso"].active { background: var(--jade-glow); color: var(--jade-bright); }
+.desglose-hero { text-align: center; padding: 2px 0 22px; }
+.desglose-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+.desglose-total {
+  font-family: var(--font-display);
+  font-size: 46px;
+  font-weight: 400;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  margin: 8px 0 6px;
+  font-feature-settings: 'tnum';
+}
+.desglose-total.income { color: var(--jade-bright); }
+.desglose-total.expense { color: var(--coral-bright); }
+.desglose-meta { font-size: 12px; color: var(--text-dim); }
+.desglose-section-title {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  margin: 18px 0 12px;
+}
+.desglose-cat + .desglose-cat { margin-top: 14px; }
+.desglose-cat-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  font-size: 14px;
+}
+.desglose-cat-top span:first-child { color: var(--text); }
+.desglose-cat-top span:last-child {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+.desglose-bar {
+  height: 4px;
+  margin-top: 7px;
+  background: var(--bg-3);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.desglose-bar i {
+  display: block;
+  height: 100%;
+  min-width: 2px;
+  background: var(--coral);
+  border-radius: inherit;
+}
+.desglose-cat.income .desglose-bar i { background: var(--jade); }
+.desglose-cat-meta { font-size: 11px; color: var(--text-faint); margin-top: 4px; }
 
 /* ============================================
    TOAST
@@ -1498,20 +1603,22 @@ mark.search-highlight { background: rgba(251, 191, 36, 0.3); color: var(--text-1
     </div>
 
     <div class="quick-stats">
-      <div class="stat-pill income">
+      <button type="button" class="stat-pill income" data-action="ver-desglose" data-tipo="ingreso">
         <div class="stat-pill-icon">↑</div>
         <div class="stat-pill-info">
           <div class="stat-pill-label">Ingresos</div>
           <div class="stat-pill-value" id="ingresosAmount">Q0</div>
         </div>
-      </div>
-      <div class="stat-pill expense">
+        <span class="stat-pill-chevron">›</span>
+      </button>
+      <button type="button" class="stat-pill expense" data-action="ver-desglose" data-tipo="gasto">
         <div class="stat-pill-icon">↓</div>
         <div class="stat-pill-info">
           <div class="stat-pill-label">Gastos</div>
           <div class="stat-pill-value" id="gastosAmount">Q0</div>
         </div>
-      </div>
+        <span class="stat-pill-chevron">›</span>
+      </button>
     </div>
 
     <div class="section">
@@ -2256,6 +2363,18 @@ mark.search-highlight { background: rgba(251, 191, 36, 0.3); color: var(--text-1
         <button class="modal-close" data-close="metaDetailModal">X</button>
       </div>
       <div id="metaDetailBody"></div>
+    </div>
+  </div>
+
+  <!-- ============ MODAL: DESGLOSE DE INGRESOS / GASTOS ============ -->
+  <div class="modal-overlay" id="desgloseModal">
+    <div class="modal">
+      <div class="modal-grabber"></div>
+      <div class="modal-header">
+        <div class="modal-title" id="desgloseTitle">Desglose</div>
+        <button class="modal-close" data-close="desgloseModal">X</button>
+      </div>
+      <div id="desgloseBody"></div>
     </div>
   </div>
 
@@ -3560,6 +3679,93 @@ function actualizarStats() {
   document.querySelector('.page-title').textContent = 'Hola, ' + (new Date().getHours() < 12 ? 'buenos días' : new Date().getHours() < 19 ? 'buenas tardes' : 'buenas noches');
 }
 
+function abrirDesglose(tipo) {
+  const esIngreso = tipo === 'ingreso';
+  const clase = esIngreso ? 'income' : 'expense';
+  const movs = ALL_DATA.movimientos.filter(m => {
+    const t = props(m.properties, 'Tipo', '');
+    if (t === 'Ingreso' || t === 'Prestamo recibido') return esIngreso;
+    if (t === 'Transferencia' || t === 'Pago de tarjeta') return false;
+    return !esIngreso;
+  });
+
+  const total = movs.reduce((a, m) => a + Math.abs(props(m.properties, 'Signo', 0)), 0);
+
+  const porCat = {};
+  for (const m of movs) {
+    const cat = props(m.properties, 'Categoria', 'Sin categoría') || 'Sin categoría';
+    if (!porCat[cat]) porCat[cat] = { total: 0, count: 0 };
+    porCat[cat].total += Math.abs(props(m.properties, 'Signo', 0));
+    porCat[cat].count++;
+  }
+  const cats = Object.entries(porCat).sort((a, b) => b[1].total - a[1].total);
+
+  const mes = MESES[new Date().getMonth()] + ' ' + new Date().getFullYear();
+  const switchHtml =
+    '<div class="desglose-switch">' +
+      '<button type="button" class="' + (!esIngreso ? 'active' : '') + '" data-action="ver-desglose" data-tipo="gasto">Gastos</button>' +
+      '<button type="button" class="' + (esIngreso ? 'active' : '') + '" data-action="ver-desglose" data-tipo="ingreso">Ingresos</button>' +
+    '</div>';
+
+  document.getElementById('desgloseTitle').innerText = esIngreso ? 'Ingresos' : 'Gastos';
+
+  if (movs.length === 0) {
+    document.getElementById('desgloseBody').innerHTML = switchHtml +
+      '<div class="empty"><div class="empty-icon">○</div>Sin ' + (esIngreso ? 'ingresos' : 'gastos') + ' este mes</div>';
+    openModal('desgloseModal');
+    return;
+  }
+
+  const catsHtml = cats.map(([cat, d]) => {
+    const pct = total > 0 ? (d.total / total) * 100 : 0;
+    return '<div class="desglose-cat ' + clase + '">' +
+      '<div class="desglose-cat-top"><span>' + escapeHtml(cat) + '</span><span>' + fmt(d.total) + '</span></div>' +
+      '<div class="desglose-bar"><i style="width: ' + Math.max(1.5, pct).toFixed(1) + '%"></i></div>' +
+      '<div class="desglose-cat-meta">' + d.count + ' movimiento' + (d.count === 1 ? '' : 's') + ' · ' + pct.toFixed(0) + '%</div>' +
+    '</div>';
+  }).join('');
+
+  const ordenados = [...movs].sort((a, b) =>
+    (props(b.properties, 'Fecha', '') || '').localeCompare(props(a.properties, 'Fecha', '') || '')
+  );
+
+  const movsHtml = ordenados.map(m => {
+    const p = m.properties;
+    const cat = props(p, 'Categoria', 'Sin categoría');
+    const nota = props(p, 'Nota', '');
+    const cuenta = props(p, 'Cuenta', '');
+    const fecha = props(p, 'Fecha', '');
+    const moneda = props(p, 'Moneda', 'GTQ');
+    const monto = Math.abs(props(p, 'Signo', 0));
+    return '<div class="list-item" data-action="view-movimiento" data-id="' + m.id + '">' +
+      '<div class="list-icon ' + clase + '">' + (esIngreso ? '↑' : '↓') + '</div>' +
+      '<div class="list-info">' +
+        '<div class="list-title">' + escapeHtml(cat) + (nota ? ' · ' + escapeHtml(nota) : '') + '</div>' +
+        '<div class="list-meta">' +
+          (fecha ? '<span>' + fmtFecha(fecha) + '</span> · ' : '') +
+          '<span>' + escapeHtml(cuenta) + '</span>' +
+          (moneda !== 'GTQ' ? ' · ' + escapeHtml(moneda) : '') +
+        '</div>' +
+      '</div>' +
+      '<div class="list-amount ' + clase + '">' + (esIngreso ? '+' : '-') + fmt(monto, moneda) + '</div>' +
+    '</div>';
+  }).join('');
+
+  document.getElementById('desgloseBody').innerHTML =
+    switchHtml +
+    '<div class="desglose-hero">' +
+      '<div class="desglose-eyebrow">' + mes + '</div>' +
+      '<div class="desglose-total ' + clase + '">' + fmt(total) + '</div>' +
+      '<div class="desglose-meta">' + movs.length + ' movimiento' + (movs.length === 1 ? '' : 's') + ' · ' + cats.length + ' categoría' + (cats.length === 1 ? '' : 's') + '</div>' +
+    '</div>' +
+    '<div class="desglose-section-title">Por categoría</div>' +
+    catsHtml +
+    '<div class="desglose-section-title">Movimientos</div>' +
+    movsHtml;
+
+  openModal('desgloseModal');
+}
+
 function renderCuentas(porCuenta) {
   // Excluir TCs y metas del Inicio: solo cuentas reales
   // (las TC viven en Cuentas > Tarjetas con deuda/disponible)
@@ -3953,6 +4159,11 @@ function renderVisacuotas() {
 document.addEventListener('click', async (e) => {
   const action = e.target.closest('[data-action]')?.dataset.action;
   if (!action) return;
+
+  if (action === 'ver-desglose') {
+    abrirDesglose(e.target.closest('[data-tipo]').dataset.tipo);
+    return;
+  }
 
   if (action === 'mark-presupuesto-paid') {
     const id = e.target.closest('[data-id]').dataset.id;
