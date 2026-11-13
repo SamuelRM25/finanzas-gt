@@ -6621,7 +6621,7 @@ async function init() {
     if (Notification && Notification.permission === 'default') {
       const btn = document.createElement('button');
       btn.innerHTML = 'Activar recordatorios de pagos';
-      btn.style.cssText = 'position:fixed; bottom:80px; left:50%; transform:translateX(-50%); z-index:999; padding:10px 18px; background:var(--jade-dim); color:var(--jade-bright); border:1px solid var(--jade); border-radius:999px; font-size:13px; font-weight:600; cursor:pointer; box-shadow:0 4px 20px rgba(0,0,0,0.3);';
+      btn.style.cssText = 'position:fixed; bottom:80px; left:50%; transform:translateX(-50%); z-index:150; padding:10px 18px; background:var(--jade-dim); color:var(--jade-bright); border:1px solid var(--jade); border-radius:999px; font-size:13px; font-weight:600; cursor:pointer; box-shadow:0 4px 20px rgba(0,0,0,0.3);';
       btn.onclick = async function() {
         const ok = await requestNotifPermission();
         if (ok) {
@@ -6632,7 +6632,7 @@ async function init() {
         }
         btn.remove();
       };
-      document.body.appendChild(btn);
+      (document.getElementById('app') || document.body).appendChild(btn);
       setTimeout(function() { btn.remove(); }, 15000);
     }
   }, 3000);
