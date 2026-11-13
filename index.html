@@ -1127,6 +1127,179 @@ mark.search-highlight { background: rgba(251, 191, 36, 0.3); color: var(--text-1
 .amort-row.header { color: var(--text); font-weight: 600; padding-bottom: 6px; border-bottom: 1px solid var(--border); margin-bottom: 6px; }
 
 /* ============================================
+   SPLASH DE BIENVENIDA
+   ============================================ */
+.splash {
+  position: fixed; inset: 0; z-index: 3000;
+  display: flex; align-items: center; justify-content: center;
+  background:
+    radial-gradient(ellipse 70% 55% at 50% 42%, rgba(16, 185, 129, 0.10), transparent 65%),
+    radial-gradient(ellipse 55% 40% at 50% 60%, rgba(251, 191, 36, 0.055), transparent 70%),
+    var(--bg);
+  overflow: hidden;
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 0.65s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.65s;
+}
+.splash::before {
+  content: '';
+  position: absolute; inset: 0;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'><g fill='none' stroke='%23ffffff' stroke-width='0.5' opacity='0.025'><path d='M40 0L80 40L40 80L0 40Z'/><path d='M40 20L60 40L40 60L20 40Z'/></g></svg>");
+  background-size: 80px 80px;
+  pointer-events: none;
+}
+.splash::after {
+  content: '';
+  position: absolute; left: 50%; top: 50%;
+  width: min(78vw, 560px); height: min(78vw, 560px);
+  transform: translate(-50%, -50%);
+  background: radial-gradient(circle, rgba(251, 191, 36, 0.045), transparent 62%);
+  filter: blur(24px);
+  pointer-events: none;
+}
+.splash.is-leaving {
+  opacity: 0;
+  visibility: hidden;
+}
+.splash-inner {
+  position: relative; z-index: 1;
+  display: flex; flex-direction: column; align-items: center;
+  padding: 0 24px;
+  will-change: transform, opacity;
+  transition: transform 0.65s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.5s ease;
+}
+.splash.is-leaving .splash-inner {
+  transform: translateY(-10px) scale(1.015);
+  opacity: 0;
+}
+.splash-mark-wrap {
+  position: relative;
+  display: flex; align-items: center; justify-content: center;
+  width: 74px; height: 74px;
+  margin-bottom: 28px;
+  opacity: 0;
+}
+.splash-mark {
+  position: relative; z-index: 1;
+  display: flex; align-items: center; justify-content: center;
+  width: 74px; height: 74px;
+  border: 1px solid rgba(16, 185, 129, 0.30);
+  border-radius: 18px;
+  background: linear-gradient(145deg, var(--bg-2), var(--bg-1));
+  color: var(--jade-bright);
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 44px; font-style: italic; font-weight: 500;
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.35),
+    0 14px 44px rgba(0, 0, 0, 0.55),
+    0 0 44px rgba(16, 185, 129, 0.08);
+}
+.splash-ring {
+  position: absolute; inset: -1px;
+  border: 1px solid rgba(16, 185, 129, 0.45);
+  border-radius: 19px;
+  opacity: 0;
+}
+.splash-word-wrap {
+  overflow: hidden;
+  padding: 0 8px 8px;
+}
+.splash-word {
+  font-family: var(--font-display);
+  font-size: clamp(48px, 13vw, 66px);
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  color: var(--text);
+  white-space: nowrap;
+  opacity: 0;
+  transform: translateY(16px);
+  filter: blur(7px);
+}
+.splash-period { color: var(--gold); }
+.splash-rule {
+  width: 78px; height: 1px;
+  margin: 22px 0 18px;
+  background: linear-gradient(90deg, transparent, rgba(251, 191, 36, 0.9), transparent);
+  transform: scaleX(0);
+  transform-origin: center;
+  opacity: 0;
+}
+.splash-tagline {
+  font-family: var(--font-mono);
+  font-size: 10px; font-weight: 500;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  padding-left: 0.28em;
+  opacity: 0;
+}
+.splash-progress {
+  position: absolute; left: 50%; z-index: 1;
+  bottom: max(36px, calc(var(--safe-bottom) + 28px));
+  width: 96px; height: 1px;
+  transform: translateX(-50%);
+  background: rgba(255, 255, 255, 0.07);
+  overflow: hidden;
+  border-radius: 1px;
+}
+.splash-progress span {
+  display: block; width: 100%; height: 100%;
+  background: linear-gradient(90deg, rgba(251, 191, 36, 0.15), var(--gold));
+  transform: scaleX(0);
+  transform-origin: left;
+}
+
+.splash.is-playing .splash-mark-wrap {
+  animation: splashMarkIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.10s both;
+}
+.splash.is-playing .splash-ring {
+  animation: splashRing 1.6s cubic-bezier(0.16, 1, 0.3, 1) 0.38s both;
+}
+.splash.is-playing .splash-word {
+  animation: splashWordIn 1s cubic-bezier(0.65, 0, 0.35, 1) 0.34s both;
+}
+.splash.is-playing .splash-rule {
+  animation: splashRuleIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.86s both;
+}
+.splash.is-playing .splash-tagline {
+  animation: splashTaglineIn 0.9s cubic-bezier(0.16, 1, 0.3, 1) 1.02s both;
+}
+.splash.is-playing .splash-progress span {
+  animation: splashProgress 1.85s cubic-bezier(0.4, 0, 0.2, 1) 0.45s both;
+}
+
+@keyframes splashMarkIn {
+  from { opacity: 0; transform: scale(0.9) translateY(8px); filter: blur(8px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); filter: blur(0); }
+}
+@keyframes splashRing {
+  0%   { opacity: 0; transform: scale(0.92); }
+  28%  { opacity: 0.75; }
+  100% { opacity: 0; transform: scale(1.7); }
+}
+@keyframes splashWordIn {
+  from { opacity: 0; transform: translateY(16px); filter: blur(7px); }
+  to   { opacity: 1; transform: translateY(0); filter: blur(0); }
+}
+@keyframes splashRuleIn {
+  from { opacity: 0; transform: scaleX(0); }
+  to   { opacity: 1; transform: scaleX(1); }
+}
+@keyframes splashTaglineIn {
+  from { opacity: 0; transform: translateY(6px); letter-spacing: 0.42em; }
+  to   { opacity: 1; transform: translateY(0); letter-spacing: 0.28em; }
+}
+@keyframes splashProgress {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .splash { display: none !important; }
+}
+
+/* ============================================
    UTILITIES
    ============================================ */
 .hidden { display: none !important; }
@@ -1159,6 +1332,78 @@ mark.search-highlight { background: rgba(251, 191, 36, 0.3); color: var(--text-1
 </style>
 </head>
 <body>
+
+<!-- SPLASH DE BIENVENIDA -->
+<div class="splash" id="splashScreen" aria-hidden="true">
+  <div class="splash-inner">
+    <div class="splash-mark-wrap">
+      <span class="splash-ring"></span>
+      <span class="splash-mark">M</span>
+    </div>
+    <div class="splash-word-wrap">
+      <div class="splash-word">MiFinanza<span class="splash-period">.</span></div>
+    </div>
+    <div class="splash-rule"></div>
+    <div class="splash-tagline">Finanzas personales</div>
+  </div>
+  <div class="splash-progress"><span></span></div>
+</div>
+<noscript><style>.splash{display:none!important}</style></noscript>
+
+<script>
+(function () {
+  var splash = document.getElementById('splashScreen');
+  if (!splash) return;
+
+  try {
+    var params = new URLSearchParams(location.search);
+    var force = params.get('splash') === '1';
+    var skip = params.get('splash') === '0';
+    var seen = false;
+    try { seen = sessionStorage.getItem('mifinanza_splash_seen') === '1'; } catch (e) {}
+    var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    if (skip || reduced || (seen && !force)) {
+      splash.parentNode.removeChild(splash);
+      return;
+    }
+    try { sessionStorage.setItem('mifinanza_splash_seen', '1'); } catch (e) {}
+
+    var leaving = false;
+    var timer = null;
+
+    function leave() {
+      if (leaving) return;
+      leaving = true;
+      if (timer) clearTimeout(timer);
+      window.removeEventListener('keydown', leave);
+      splash.removeEventListener('pointerdown', leave);
+      splash.classList.add('is-leaving');
+      setTimeout(function () {
+        if (splash.parentNode) splash.parentNode.removeChild(splash);
+      }, 700);
+    }
+
+    function start() {
+      splash.classList.add('is-playing');
+      timer = setTimeout(leave, 2450);
+      splash.addEventListener('pointerdown', leave);
+      window.addEventListener('keydown', leave);
+    }
+
+    // Esperar la fuente serif para que el wordmark no cambie a mitad de la animación
+    var fonts = (document.fonts && document.fonts.ready) ? document.fonts.ready : Promise.resolve();
+    var cap = new Promise(function (resolve) { setTimeout(resolve, 500); });
+    Promise.race([fonts, cap]).then(function () {
+      requestAnimationFrame(function () {
+        requestAnimationFrame(start);
+      });
+    });
+  } catch (e) {
+    if (splash.parentNode) splash.parentNode.removeChild(splash);
+  }
+})();
+</script>
 
 <!-- AUTH -->
 <div class="auth-overlay show" id="authOverlay">
